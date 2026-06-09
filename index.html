@@ -1,0 +1,639 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Pizza House - a premium single-page restaurant website with online menu, special deals, and fast ordering.">
+  <title>Pizza House | Best Food in Your Town</title>
+  <link rel="stylesheet" href="assets/css/style.css?v=1.0">
+</head>
+<body>
+  <div class="page-bg" aria-hidden="true"></div>
+
+  <header class="navbar" id="navbar">
+    <div class="container navbar__inner">
+      <a class="brand" href="#home" aria-label="Pizza House home">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
+            <path d="M11 15c11-4 30-4 42 0-3 6-7 10-16 12 7 3 10 8 10 15 0 10-8 17-16 17S15 52 15 42c0-9 4-15 12-17-6-2-11-6-16-10Z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/>
+            <path d="M28 21c2-3 4-5 8-7" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="28" cy="34" r="3.2" fill="currentColor"/>
+            <circle cx="39" cy="28" r="3.2" fill="currentColor"/>
+            <circle cx="36" cy="42" r="3.2" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="brand__text">
+          <strong data-restaurant-name>Pizza House</strong>
+          <small data-restaurant-tagline>Premium Restaurant</small>
+        </span>
+      </a>
+
+      <button class="navbar__toggle" type="button" aria-label="Open menu" aria-controls="siteNav" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <nav class="navbar__nav" id="siteNav" aria-label="Primary navigation">
+        <a class="navbar__link is-active" href="#home">Home</a>
+        <a class="navbar__link" href="#menu">Menu</a>
+        <a class="navbar__link" href="#deals">Deals</a>
+        <a class="navbar__link" href="#about">About</a>
+        <a class="navbar__link" href="#contact">Contact</a>
+      </nav>
+
+      <a class="btn btn--primary navbar__cta" href="#contact" data-navbar-cta>Order Now</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero section" id="home">
+      <div class="container hero__grid">
+        <div class="hero__content reveal">
+          <span class="hero__badge" data-hero-badge>HOT &amp; FRESH</span>
+          <h1 data-hero-title>Best Food in Your <span>Town</span></h1>
+          <p data-hero-subtitle>
+            Premium pizza-house flavors, juicy burgers, spicy shawarma wraps, and cool drinks,
+            all crafted for a bold late-night craving or a family feast.
+          </p>
+          <div class="hero__actions">
+            <a class="btn btn--primary" href="#contact" data-hero-primary-cta>Order Now</a>
+            <a class="btn btn--ghost" href="#menu" data-hero-secondary-cta>View Menu</a>
+          </div>
+          <div class="hero__stats">
+            <article class="hero-stat" data-hero-stat="0">
+              <strong>30 min</strong>
+              <span>Fast delivery</span>
+            </article>
+            <article class="hero-stat" data-hero-stat="1">
+              <strong>4.9/5</strong>
+              <span>Top-rated taste</span>
+            </article>
+            <article class="hero-stat" data-hero-stat="2">
+              <strong>50+</strong>
+              <span>Menu choices</span>
+            </article>
+          </div>
+        </div>
+
+        <div class="hero__visual reveal">
+          <div class="hero-image">
+            <div class="hero-glow" aria-hidden="true"></div>
+            <img
+              src="images/hero%20image.png?v=2"
+              alt="Floating Pizza Hero Image"
+              class="hero-food-img"
+              data-hero-image
+              loading="eager"
+              fetchpriority="high">
+          </div>
+          <div class="hero__floating hero__floating--top">
+            <span class="hero__floating-label" data-hero-floating-top-label>Today's special</span>
+            <strong data-hero-floating-top-value>Family Combo</strong>
+          </div>
+          <div class="hero__floating hero__floating--bottom">
+            <span class="hero__floating-label" data-hero-floating-bottom-label>Free delivery</span>
+            <strong data-hero-floating-bottom-value>Over $25</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--tight feature-bar">
+      <div class="container feature-grid">
+        <article class="feature-card reveal">
+          <span class="feature-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48">
+              <path d="M7 27h15l4-12 4 18 3-9h8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="14" cy="32" r="4" fill="none" stroke="currentColor" stroke-width="3.2"/>
+              <circle cx="34" cy="32" r="4" fill="none" stroke="currentColor" stroke-width="3.2"/>
+            </svg>
+          </span>
+          <h3>Fast Delivery</h3>
+          <p>Hot food at your door with quick local dispatch and careful packing.</p>
+        </article>
+
+        <article class="feature-card reveal">
+          <span class="feature-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48">
+              <path d="M24 7c6 6 10 12 10 18a10 10 0 1 1-20 0c0-6 4-12 10-18Z" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"/>
+              <path d="M18 23c3 1 4 3 4 5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <h3>Fresh Ingredients</h3>
+          <p>We prep with bright toppings, crisp greens, and quality sauces daily.</p>
+        </article>
+
+        <article class="feature-card reveal">
+          <span class="feature-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48">
+              <path d="M24 6l4.5 9.8L39 18l-8 7.8L33.8 36 24 30.8 14.2 36 16 25.8 8 18l10.5-2.2Z" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <h3>Best Offers</h3>
+          <p>Bundled combos and rotating deals that make dinner feel premium and smart.</p>
+        </article>
+
+        <article class="feature-card reveal">
+          <span class="feature-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48">
+              <path d="M10 18c0-4 3-7 7-7h14c4 0 7 3 7 7v9c0 4-3 7-7 7H17c-4 0-7-3-7-7Z" fill="none" stroke="currentColor" stroke-width="3.2"/>
+              <path d="M18 26h12M18 20h12M18 32h7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <h3>Premium Quality</h3>
+          <p>Clean presentation, rich flavors, and polished restaurant branding throughout.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="menu">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="section-head__eyebrow">Online Menu</span>
+          <h2>Fresh picks for every craving</h2>
+          <p>Filter by category, preview popular dishes, and tap any item to jump straight to the order form.</p>
+        </div>
+
+        <div class="filter-bar reveal" id="menuFilters" role="tablist" aria-label="Menu filters">
+          <button class="filter-btn is-active" type="button" data-filter="all">All</button>
+          <button class="filter-btn" type="button" data-filter="pizza">Pizza</button>
+          <button class="filter-btn" type="button" data-filter="burger">Burger</button>
+          <button class="filter-btn" type="button" data-filter="shawarma">Shawarma</button>
+          <button class="filter-btn" type="button" data-filter="drinks">Drinks</button>
+        </div>
+
+        <div class="menu-grid" id="menuGrid" data-menu-grid>
+          <article class="food-card reveal" data-category="pizza">
+            <div class="food-card__media">
+              <span class="food-card__tag">Best Seller</span>
+              <img src="images/Pizza/pizza%202.png" alt="Margherita Blaze Pizza">
+            </div>
+            <div class="food-card__body">
+              <h3>Margherita Blaze Pizza</h3>
+              <p>Wood-fired crust, mozzarella, basil, and a smoky tomato glaze.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$12.90</span>
+                <span class="food-card__rating">★ 4.9</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Margherita Blaze Pizza">Add to Cart</button>
+            </div>
+          </article>
+
+          <article class="food-card reveal" data-category="pizza">
+            <div class="food-card__media">
+              <span class="food-card__tag">Hot</span>
+              <img src="images/Pizza/pizza%203.jpg" alt="Tandoori Fire Pizza">
+            </div>
+            <div class="food-card__body">
+              <h3>Tandoori Fire Pizza</h3>
+              <p>Tandoori chicken, peppers, onions, and a rich spiced sauce.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$14.50</span>
+                <span class="food-card__rating">★ 4.8</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Tandoori Fire Pizza">Add to Cart</button>
+            </div>
+          </article>
+
+          <article class="food-card reveal" data-category="pizza">
+            <div class="food-card__media">
+              <span class="food-card__tag">Chef's pick</span>
+              <img src="images/Pizza/pizza%204.jpg" alt="Loaded Supreme Pizza">
+            </div>
+            <div class="food-card__body">
+              <h3>Loaded Supreme Pizza</h3>
+              <p>Layers of cheese, olives, chicken, and peppers for a full bite.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$16.20</span>
+                <span class="food-card__rating">★ 5.0</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Loaded Supreme Pizza">Add to Cart</button>
+            </div>
+          </article>
+
+          <article class="food-card reveal" data-category="burger">
+            <div class="food-card__media">
+              <span class="food-card__tag">Juicy</span>
+              <img src="images/Burger/burger%201.jpg" alt="Classic Flame Burger">
+            </div>
+            <div class="food-card__body">
+              <h3>Classic Flame Burger</h3>
+              <p>Beef patty, crisp lettuce, tomato, and melted cheddar in a soft bun.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$8.90</span>
+                <span class="food-card__rating">★ 4.7</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Classic Flame Burger">Add to Cart</button>
+            </div>
+          </article>
+
+          <article class="food-card reveal" data-category="burger">
+            <div class="food-card__media">
+              <span class="food-card__tag">Double cheese</span>
+              <img src="images/Burger/Burger%202.jpg" alt="Double Cheese Crunch Burger">
+            </div>
+            <div class="food-card__body">
+              <h3>Double Cheese Crunch</h3>
+              <p>Crispy chicken, double cheese, onion, and our signature house sauce.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$10.40</span>
+                <span class="food-card__rating">★ 4.8</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Double Cheese Crunch">Add to Cart</button>
+            </div>
+          </article>
+
+          <article class="food-card reveal" data-category="burger">
+            <div class="food-card__media">
+              <span class="food-card__tag">Crispy</span>
+              <img src="images/Burger/Burger%20%203.jpg" alt="Crispy Chicken Tower Burger">
+            </div>
+            <div class="food-card__body">
+              <h3>Crispy Chicken Tower</h3>
+              <p>Golden fried chicken, cheddar, pickles, and a smoky glaze.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$9.80</span>
+                <span class="food-card__rating">★ 4.9</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Crispy Chicken Tower">Add to Cart</button>
+            </div>
+          </article>
+
+          <article class="food-card reveal" data-category="shawarma">
+            <div class="food-card__media">
+              <span class="food-card__tag">Wrap</span>
+              <img src="images/Combo/Combo%201.jpg" alt="Chicken Shawarma Wrap">
+            </div>
+            <div class="food-card__body">
+              <h3>Chicken Shawarma Wrap</h3>
+              <p>Soft wrap filled with shawarma strips, garlic sauce, and fresh salad.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$7.90</span>
+                <span class="food-card__rating">★ 4.8</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Chicken Shawarma Wrap">Add to Cart</button>
+            </div>
+          </article>
+
+          <article class="food-card reveal" data-category="shawarma">
+            <div class="food-card__media">
+              <span class="food-card__tag">Feast box</span>
+              <img src="images/Combo/Combo%202.jpg" alt="Royal Shawarma Feast Box">
+            </div>
+            <div class="food-card__body">
+              <h3>Royal Shawarma Feast Box</h3>
+              <p>A loaded box with wraps, fries, dips, and a street-food style finish.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$11.20</span>
+                <span class="food-card__rating">★ 4.7</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Royal Shawarma Feast Box">Add to Cart</button>
+            </div>
+          </article>
+
+          <article class="food-card reveal" data-category="shawarma">
+            <div class="food-card__media">
+              <span class="food-card__tag">Mixed grill</span>
+              <img src="images/Combo/Combo%203.jpg" alt="Mixed Grill Shawarma Platter">
+            </div>
+            <div class="food-card__body">
+              <h3>Mixed Grill Shawarma Platter</h3>
+              <p>Smoky mix of grilled bites, wraps, and sides for sharing at the table.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$13.60</span>
+                <span class="food-card__rating">★ 4.9</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Mixed Grill Shawarma Platter">Add to Cart</button>
+            </div>
+          </article>
+
+          <article class="food-card reveal" data-category="drinks">
+            <div class="food-card__media">
+              <span class="food-card__tag">Chilled</span>
+              <img src="images/Dinks/Drinks%201.jpg" alt="Lime Spark Soda">
+            </div>
+            <div class="food-card__body">
+              <h3>Lime Spark Soda</h3>
+              <p>Bright citrus bubbles to cut through the richness of a big meal.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$2.90</span>
+                <span class="food-card__rating">★ 4.6</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Lime Spark Soda">Add to Cart</button>
+            </div>
+          </article>
+
+          <article class="food-card reveal" data-category="drinks">
+            <div class="food-card__media">
+              <span class="food-card__tag">Fresh</span>
+              <img src="images/Dinks/Drinks%203.jpg" alt="Strawberry Chill Juice">
+            </div>
+            <div class="food-card__body">
+              <h3>Strawberry Chill Juice</h3>
+              <p>Sweet, cool, and refreshing with a smooth finish on warm evenings.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$4.40</span>
+                <span class="food-card__rating">★ 4.8</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Strawberry Chill Juice">Add to Cart</button>
+            </div>
+          </article>
+
+          <article class="food-card reveal" data-category="drinks">
+            <div class="food-card__media">
+              <span class="food-card__tag">Shake</span>
+              <img src="images/Dinks/Drinks%205.jpg" alt="Oreo Dream Shake">
+            </div>
+            <div class="food-card__body">
+              <h3>Oreo Dream Shake</h3>
+              <p>Thick, creamy, and topped like a dessert worth slowing down for.</p>
+              <div class="food-card__meta">
+                <span class="food-card__price">$5.20</span>
+                <span class="food-card__rating">★ 4.9</span>
+              </div>
+              <button class="food-card__btn order-trigger" type="button" data-food="Oreo Dream Shake">Add to Cart</button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section deals-section" id="deals">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="section-head__eyebrow">Special Deals</span>
+          <h2>Combos built for value and appetite</h2>
+          <p>These premium offers are designed to look tempting on the page and easy to promote later from the admin panel.</p>
+        </div>
+
+        <div class="deal-grid" id="dealGrid" data-deal-grid>
+          <article class="deal-card reveal">
+            <div class="deal-card__media">
+              <span class="deal-card__badge">Save 28%</span>
+              <img src="images/Pizza/pizza%205.jpg" alt="Family Pizza Combo">
+            </div>
+            <div class="deal-card__body">
+              <h3>Family Pizza Combo</h3>
+              <p>A large pizza, extra dip, and a soft drink bundle for easy family dinners.</p>
+              <div class="deal-card__price">
+                <del>$34.00</del>
+                <strong>$24.99</strong>
+              </div>
+              <button class="deal-card__cta order-trigger" type="button" data-food="Family Pizza Combo">Claim Deal</button>
+            </div>
+          </article>
+
+          <article class="deal-card reveal">
+            <div class="deal-card__media">
+              <span class="deal-card__badge">Save 22%</span>
+              <img src="images/Burger/Burger%20%204.jpg" alt="Burger Meal Deal">
+            </div>
+            <div class="deal-card__body">
+              <h3>Burger Meal Deal</h3>
+              <p>Two burgers, fries, and a cool drink packed into one easy lunch option.</p>
+              <div class="deal-card__price">
+                <del>$19.00</del>
+                <strong>$14.50</strong>
+              </div>
+              <button class="deal-card__cta order-trigger" type="button" data-food="Burger Meal Deal">Claim Deal</button>
+            </div>
+          </article>
+
+          <article class="deal-card reveal deal-card--split">
+            <div class="deal-card__media deal-card__media--split">
+              <div class="deal-card__split-image">
+                <img src="images/Combo/Combo%201.jpg" alt="Shawarma combo">
+              </div>
+              <div class="deal-card__split-image">
+                <img src="images/Dinks/Drinks%204.jpg" alt="Refreshing drink combo">
+              </div>
+              <span class="deal-card__badge">Save 25%</span>
+            </div>
+            <div class="deal-card__body">
+              <h3>Shawarma + Drinks Combo</h3>
+              <p>A wrap-heavy combo with a cold drink to keep the meal balanced and lively.</p>
+              <div class="deal-card__price">
+                <del>$18.00</del>
+                <strong>$12.99</strong>
+              </div>
+              <button class="deal-card__cta order-trigger" type="button" data-food="Shawarma + Drinks Combo">Claim Deal</button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section about-section" id="about">
+      <div class="container about__grid">
+        <div class="about__content reveal">
+          <span class="section-head__eyebrow">About Us</span>
+          <h2 data-about-title>Built like a local favorite, styled like a premium brand</h2>
+          <p data-about-text-1>
+            Pizza House is designed as a modern neighborhood restaurant with a luxury black-and-red
+            identity. The concept is flexible enough to support pizza, burgers, shawarma, and drinks,
+            while keeping the look bold enough for social posts, ads, and future online ordering.
+          </p>
+          <p data-about-text-2>
+            The kitchen story is simple: fresh ingredients, well-balanced spice, quick service, and
+            generous portions that keep customers coming back.
+          </p>
+
+          <div class="about__points">
+            <article class="about-point">
+              <strong>Fresh Prep</strong>
+              <span>Ingredients are chopped, mixed, and baked close to the order time.</span>
+            </article>
+            <article class="about-point">
+              <strong>Quality Taste</strong>
+              <span>Every dish is styled to feel rich, warm, and satisfying.</span>
+            </article>
+            <article class="about-point">
+              <strong>Fast Delivery</strong>
+              <span>Delivery-first layout that is ready for a future backend workflow.</span>
+            </article>
+          </div>
+        </div>
+
+        <div class="about__visual reveal">
+          <div class="about-media about-media--large">
+            <img src="images/Pizza/pizza%205.jpg" alt="Premium family pizza" data-about-image-primary>
+          </div>
+          <div class="about-media about-media--small">
+            <img src="images/Burger/Burger%20%204.jpg" alt="Premium burger stack" data-about-image-secondary>
+          </div>
+          <div class="about-media about-media--small about-media--accent">
+            <img src="images/Dinks/Drinks%202.jpg" alt="Bright drink special" data-about-image-tertiary>
+          </div>
+          <div class="about__stat">
+            <strong data-about-stat-value>4.9</strong>
+            <span data-about-stat-label>Guest rating</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section contact-section" id="contact">
+      <div class="container contact__grid">
+        <div class="contact__info reveal">
+          <span class="section-head__eyebrow">Contact &amp; Order</span>
+          <h2>Tell us what you want and we’ll get moving</h2>
+          <p>
+            Use the form to send a quick order request. The page will try to send it to the backend API,
+            and if the database is not ready yet it still keeps the demo working locally.
+          </p>
+
+          <div class="contact-cards">
+            <article class="contact-card">
+              <span class="contact-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48">
+                  <path d="M16 10h16v28H16z" fill="none" stroke="currentColor" stroke-width="3.2" rx="4"/>
+                  <path d="M20 14h8M21 34h6" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <div>
+                <strong>Phone</strong>
+                <a href="tel:+8801712345678" data-contact-phone>+880 1712 345 678</a>
+              </div>
+            </article>
+
+            <article class="contact-card">
+              <span class="contact-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48">
+                  <path d="M24 8c6 0 11 5 11 11 0 10-11 21-11 21S13 29 13 19c0-6 5-11 11-11Z" fill="none" stroke="currentColor" stroke-width="3.2"/>
+                  <circle cx="24" cy="19" r="3.5" fill="none" stroke="currentColor" stroke-width="3.2"/>
+                </svg>
+              </span>
+              <div>
+                <strong>Address</strong>
+                <span data-contact-address>Demo Restaurant Road, Dhaka, Bangladesh</span>
+              </div>
+            </article>
+
+            <article class="contact-card">
+              <span class="contact-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48">
+                  <path d="M24 10v14l9 6" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="24" cy="24" r="14" fill="none" stroke="currentColor" stroke-width="3.2"/>
+                </svg>
+              </span>
+              <div>
+                <strong>Opening Hours</strong>
+                <span data-contact-hours>Every day, 11:00 AM - 11:30 PM</span>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="contact__form-wrap reveal">
+          <form class="order-form" id="orderForm" novalidate>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="customerName">Name</label>
+                <input id="customerName" name="customer_name" type="text" placeholder="Your name">
+              </div>
+              <div class="form-group">
+                <label for="customerPhone">Phone</label>
+                <input id="customerPhone" name="phone" type="tel" placeholder="01XXXXXXXXX">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="foodItem">Food Item</label>
+              <select id="foodItem" name="food_item" data-order-select>
+                <option value="">Select a dish</option>
+                <option>Margherita Blaze Pizza</option>
+                <option>Tandoori Fire Pizza</option>
+                <option>Loaded Supreme Pizza</option>
+                <option>Classic Flame Burger</option>
+                <option>Double Cheese Crunch</option>
+                <option>Crispy Chicken Tower</option>
+                <option>Chicken Shawarma Wrap</option>
+                <option>Royal Shawarma Feast Box</option>
+                <option>Mixed Grill Shawarma Platter</option>
+                <option>Lime Spark Soda</option>
+                <option>Strawberry Chill Juice</option>
+                <option>Oreo Dream Shake</option>
+                <option>Family Pizza Combo</option>
+                <option>Burger Meal Deal</option>
+                <option>Shawarma + Drinks Combo</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="orderMessage">Message</label>
+              <textarea id="orderMessage" name="message" rows="5" placeholder="Tell us the quantity, spicy level, or any special request."></textarea>
+            </div>
+
+            <button class="btn btn--primary btn--block" type="submit">Send Order Request</button>
+            <p class="form-note">We will confirm by phone or message. The form is ready for backend integration later.</p>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer__grid">
+      <div class="footer__brand">
+        <a class="brand brand--footer" href="#home">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
+              <path d="M11 15c11-4 30-4 42 0-3 6-7 10-16 12 7 3 10 8 10 15 0 10-8 17-16 17S15 52 15 42c0-9 4-15 12-17-6-2-11-6-16-10Z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/>
+              <path d="M28 21c2-3 4-5 8-7" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+              <circle cx="28" cy="34" r="3.2" fill="currentColor"/>
+              <circle cx="39" cy="28" r="3.2" fill="currentColor"/>
+              <circle cx="36" cy="42" r="3.2" fill="currentColor"/>
+            </svg>
+          </span>
+          <span class="brand__text">
+            <strong data-footer-restaurant-name>Pizza House</strong>
+            <small data-footer-restaurant-tagline>Premium Restaurant</small>
+          </span>
+        </a>
+        <p>Dark, premium, and ready for future ordering, admin CRUD, and promotions.</p>
+      </div>
+
+      <div class="footer__links">
+        <h3>Quick Links</h3>
+        <a href="#home">Home</a>
+        <a href="#menu">Menu</a>
+        <a href="#deals">Deals</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+      </div>
+
+      <div class="footer__links">
+        <h3>Social</h3>
+        <a href="#" aria-label="Facebook" data-social-link="facebook">Facebook</a>
+        <a href="#" aria-label="Instagram" data-social-link="instagram">Instagram</a>
+        <a href="#" aria-label="WhatsApp" data-social-link="whatsapp">WhatsApp</a>
+        <a href="#" aria-label="YouTube" data-social-link="youtube">YouTube</a>
+      </div>
+
+      <div class="footer__links">
+        <h3>Contact</h3>
+        <a href="tel:+8801712345678" data-footer-phone>+880 1712 345 678</a>
+        <a href="mailto:hello@pizzahouse.demo" data-footer-email>hello@pizzahouse.demo</a>
+        <span data-footer-address>Dhaka, Bangladesh</span>
+      </div>
+    </div>
+
+    <div class="container footer__copy">
+      <p>&copy; <span id="year"></span> Pizza House. All rights reserved.</p>
+      <a href="#home">Back to top</a>
+    </div>
+  </footer>
+
+  <button class="back-to-top" id="backToTop" type="button" aria-label="Back to top">
+    <span aria-hidden="true">↑</span>
+  </button>
+
+  <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="assets/js/restaurantData.js?v=1.2"></script>
+  <script src="assets/js/restaurantRenderer.js?v=1.2"></script>
+  <script src="assets/js/apiDataLoader.js?v=1.0"></script>
+  <script src="assets/js/main.js?v=1.2"></script>
+</body>
+</html>
