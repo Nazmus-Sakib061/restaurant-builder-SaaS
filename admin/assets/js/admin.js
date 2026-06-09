@@ -226,7 +226,7 @@ const isNonNegativeInteger = (value) => {
     return false;
   }
 
-  return Number.isInteger(Number(value)) && Number(value) >= 0;
+  return /^\d+$/.test(String(value).trim());
 };
 
 const escapeHTML = (value) => String(value ?? "")
@@ -974,8 +974,8 @@ const validateMenuItemFormPayload = (payload) => {
     errors.sort_order = "Sort order must be a whole number.";
   }
 
-  if (payload.category_id && !isNonNegativeInteger(payload.category_id)) {
-    errors.category_id = "Category must be a valid number.";
+  if (payload.category_id && !/^[1-9]\d*$/.test(payload.category_id)) {
+    errors.category_id = "Category must be a valid positive integer.";
   }
 
   if (!["active", "inactive"].includes(payload.status)) {
@@ -1595,7 +1595,7 @@ const renderMenuItems = () => {
   if (!currentMenuItems.length) {
     menuItemTableBody.innerHTML = `
       <tr>
-        <td colspan="7">No active menu items found for this restaurant yet.</td>
+        <td colspan="7">No menu items found for this restaurant yet.</td>
       </tr>
     `;
     return;

@@ -81,12 +81,12 @@ function menu_item_list(PDO $pdo, int $restaurantId, array $filters): array
         $conditions[] = '(mi.category_id IS NULL OR mc.status = "active")';
     }
 
-    if (!$includeInactive && array_key_exists('featured', $filters) && $filters['featured'] !== null) {
+    if (array_key_exists('featured', $filters) && $filters['featured'] !== null) {
         $conditions[] = 'mi.is_featured = :featured';
         $params['featured'] = (int) $filters['featured'];
     }
 
-    if (!$includeInactive && array_key_exists('available', $filters) && $filters['available'] !== null) {
+    if (array_key_exists('available', $filters) && $filters['available'] !== null) {
         $conditions[] = 'mi.is_available = :available';
         $params['available'] = (int) $filters['available'];
     }
@@ -123,13 +123,31 @@ function menu_item_list(PDO $pdo, int $restaurantId, array $filters): array
 function menu_item_payload(array $payload, ?array $existing = null): array
 {
     $has = static fn (string $key): bool => array_key_exists($key, $payload);
+    $categoryIdError = null;
     $featuredError = null;
     $availableError = null;
 
     $categoryId = $existing['category_id'] ?? null;
     if ($has('category_id')) {
         $categoryRaw = trim((string) $payload['category_id']);
-        $categoryId = $categoryRaw === '' ? null : (int) $categoryRaw;
+        if ($categoryRaw === '') {
+            $categoryId = null;
+        } elseif (!preg_match('/^[1-9]\d*$/', $categoryRaw)) {
+            $categoryId = null;
+            $categoryIdError = 'Category must be a valid positive integer.';
+        } else {
+            $validatedCategoryId = filter_var(
+                $categoryRaw,
+                FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 1]]
+            );
+            if ($validatedCategoryId === false) {
+                $categoryId = null;
+                $categoryIdError = 'Category must be a valid positive integer.';
+            } else {
+                $categoryId = $validatedCategoryId;
+            }
+        }
     }
 
     $name = $existing['name'] ?? '';
@@ -197,6 +215,7 @@ function menu_item_payload(array $payload, ?array $existing = null): array
 
     return [
         'category_id' => $categoryId,
+        'category_id_error' => $categoryIdError,
         'name' => $name,
         'slug' => $slug,
         'description' => $description,
@@ -269,7 +288,13 @@ function menu_item_validate(PDO $pdo, int $restaurantId, array $input, ?int $ign
         $errors['image'] = 'Image path must be 255 characters or fewer.';
     }
 
-    if ($input['category_id'] !== null) {
+    if (strlen($input['badge_text']) > 100) {
+        $errors['badge_text'] = 'Badge text must be 100 characters or fewer.';
+    }
+
+    if (!empty($input['category_id_error'])) {
+        $errors['category_id'] = $input['category_id_error'];
+    } elseif ($input['category_id'] !== null) {
         $categoryStatement = $pdo->prepare(
             'SELECT id
              FROM menu_categories
