@@ -1414,6 +1414,7 @@ const refreshRestaurantCrudData = async (slug) => {
   const resolvedSlug = slug || restaurantSelect?.value || "demo-pizza-house";
   await loadCategoriesForRestaurant(resolvedSlug);
   await loadMenuItemsForRestaurant(resolvedSlug);
+  await loadDealsForRestaurant(resolvedSlug);
 };
 
 const saveCategory = async (event) => {

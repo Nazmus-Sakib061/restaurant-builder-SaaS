@@ -76,19 +76,29 @@ function deal_payload(array $payload): array
 {
     $title = trim((string) ($payload['title'] ?? ''));
     $slug = trim((string) ($payload['slug'] ?? ''));
+    $regularPriceRaw = trim((string) ($payload['regular_price'] ?? ''));
+    $dealPriceRaw = trim((string) ($payload['deal_price'] ?? ''));
+    $sortOrderRaw = trim((string) ($payload['sort_order'] ?? ''));
+    $statusRaw = trim((string) ($payload['status'] ?? ''));
 
     return [
         'title' => $title,
         'slug' => $slug !== '' ? $slug : slugify_text($title),
         'description' => trim((string) ($payload['description'] ?? '')),
-        'regular_price' => (float) ($payload['regular_price'] ?? 0),
-        'deal_price' => (float) ($payload['deal_price'] ?? 0),
+        'regular_price_raw' => $regularPriceRaw,
+        'deal_price_raw' => $dealPriceRaw,
+        'regular_price' => is_numeric($regularPriceRaw) ? (float) $regularPriceRaw : 0.0,
+        'deal_price' => is_numeric($dealPriceRaw) ? (float) $dealPriceRaw : 0.0,
         'image' => trim((string) ($payload['image'] ?? '')),
         'badge_text' => trim((string) ($payload['badge_text'] ?? '')),
         'starts_at' => trim((string) ($payload['starts_at'] ?? '')),
         'ends_at' => trim((string) ($payload['ends_at'] ?? '')),
-        'sort_order' => max(0, (int) ($payload['sort_order'] ?? 0)),
-        'status' => status_or_default($payload['status'] ?? 'active', 'active', ['active', 'inactive']),
+        'sort_order_raw' => $sortOrderRaw,
+        'sort_order' => $sortOrderRaw === ''
+            ? 0
+            : ($sortOrderRaw !== '' && preg_match('/^[+-]?\d+$/', $sortOrderRaw) ? (int) $sortOrderRaw : null),
+        'status_raw' => $statusRaw,
+        'status' => $statusRaw === '' ? 'active' : strtolower($statusRaw),
         'items' => $payload['items'] ?? $payload['deal_items'] ?? null,
     ];
 }
@@ -163,6 +173,127 @@ function normalize_deal_items_payload(PDO $pdo, int $restaurantId, mixed $itemsP
     }
 
     return $items;
+}
+
+function deal_normalize_datetime(mixed $value): ?string
+{
+    $raw = trim((string) $value);
+    $hasNoErrors = static function (mixed $errors): bool {
+        if (!is_array($errors)) {
+            return true;
+        }
+
+        return (($errors['warning_count'] ?? 0) === 0) && (($errors['error_count'] ?? 0) === 0);
+    };
+
+    if ($raw === '') {
+        return null;
+    }
+
+    $datetime = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $raw);
+    if ($datetime !== false) {
+        $errors = DateTimeImmutable::getLastErrors();
+        if ($hasNoErrors($errors)) {
+            return $datetime->format('Y-m-d H:i:s');
+        }
+    }
+
+    $datetime = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $raw);
+    if ($datetime !== false) {
+        $errors = DateTimeImmutable::getLastErrors();
+        if ($hasNoErrors($errors)) {
+            return $datetime->format('Y-m-d H:i:s');
+        }
+    }
+
+    return null;
+}
+
+function deal_validate_temporal_fields(array $input): array
+{
+    $errors = [];
+    $startsAt = $input['starts_at'] !== '' ? deal_normalize_datetime($input['starts_at']) : null;
+    $endsAt = $input['ends_at'] !== '' ? deal_normalize_datetime($input['ends_at']) : null;
+
+    if ($input['starts_at'] !== '' && $startsAt === null) {
+        $errors['starts_at'] = 'Invalid start date/time.';
+    }
+
+    if ($input['ends_at'] !== '' && $endsAt === null) {
+        $errors['ends_at'] = 'Invalid end date/time.';
+    }
+
+    if ($startsAt !== null && $endsAt !== null && strtotime($endsAt) < strtotime($startsAt)) {
+        $errors['ends_at'] = 'End date/time must be later than or equal to start date/time.';
+    }
+
+    return $errors;
+}
+
+function deal_validate_prices(array $input): array
+{
+    $errors = [];
+    $regularPriceRaw = trim((string) ($input['regular_price_raw'] ?? ''));
+    $dealPriceRaw = trim((string) ($input['deal_price_raw'] ?? ''));
+    $regularPrice = $input['regular_price'];
+    $dealPrice = $input['deal_price'];
+
+    if ($regularPriceRaw === '' || !is_numeric($regularPriceRaw) || $regularPrice <= 0) {
+        $errors['regular_price'] = 'Regular price is required and must be greater than zero.';
+    }
+
+    if ($dealPriceRaw === '' || !is_numeric($dealPriceRaw) || $dealPrice <= 0) {
+        $errors['deal_price'] = 'Deal price is required and must be greater than zero.';
+    }
+
+    if (empty($errors['regular_price']) && empty($errors['deal_price']) && $dealPrice >= $regularPrice) {
+        $errors['deal_price'] = 'Deal price must be less than the regular price.';
+    }
+
+    return $errors;
+}
+
+function deal_validate_input(array $input): array
+{
+    $errors = [];
+
+    if ($input['title'] === '') {
+        $errors['title'] = 'Deal title is required.';
+    } elseif (strlen($input['title']) > 150) {
+        $errors['title'] = 'Deal title must be 150 characters or fewer.';
+    }
+
+    if ($input['description'] === '') {
+        $errors['description'] = 'Deal description is required.';
+    }
+
+    if ($input['badge_text'] !== '' && strlen($input['badge_text']) > 100) {
+        $errors['badge_text'] = 'Badge text must be 100 characters or fewer.';
+    }
+
+    if ($input['image'] === '') {
+        $errors['image'] = 'Deal image is required.';
+    } elseif (strlen($input['image']) > 255) {
+        $errors['image'] = 'Image path must be 255 characters or fewer.';
+    }
+
+    $sortOrderRaw = trim((string) ($input['sort_order_raw'] ?? ''));
+    if ($sortOrderRaw !== '') {
+        if (!preg_match('/^[+-]?\d+$/', $sortOrderRaw)) {
+            $errors['sort_order'] = 'Sort order must be a whole number.';
+        } elseif ((int) $sortOrderRaw < 0) {
+            $errors['sort_order'] = 'Sort order must be zero or greater.';
+        }
+    }
+
+    $statusRaw = trim((string) ($input['status_raw'] ?? ''));
+    if ($statusRaw !== '' && !in_array(strtolower($statusRaw), ['active', 'inactive'], true)) {
+        $errors['status'] = 'Invalid deal status.';
+    }
+
+    $errors = array_merge($errors, deal_validate_prices($input), deal_validate_temporal_fields($input));
+
+    return $errors;
 }
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -246,31 +377,12 @@ if ($method === 'POST') {
     $input = deal_payload($payload);
     $itemsProvided = array_key_exists('items', $payload) || array_key_exists('deal_items', $payload);
 
-    if ($input['title'] === '') {
+    $errors = deal_validate_input($input);
+    if (!empty($errors)) {
         json_response([
             'success' => false,
-            'message' => 'Deal title is required.',
-        ], 422);
-    }
-
-    if ($input['description'] === '') {
-        json_response([
-            'success' => false,
-            'message' => 'Deal description is required.',
-        ], 422);
-    }
-
-    if ($input['image'] === '') {
-        json_response([
-            'success' => false,
-            'message' => 'Deal image is required.',
-        ], 422);
-    }
-
-    if ($input['regular_price'] <= 0 || $input['deal_price'] <= 0) {
-        json_response([
-            'success' => false,
-            'message' => 'Deal prices must be greater than zero.',
+            'message' => 'Validation error.',
+            'errors' => $errors,
         ], 422);
     }
 
@@ -305,8 +417,8 @@ if ($method === 'POST') {
             'deal_price' => $input['deal_price'],
             'image' => $input['image'],
             'badge_text' => $input['badge_text'] !== '' ? $input['badge_text'] : null,
-            'starts_at' => $input['starts_at'] !== '' ? $input['starts_at'] : null,
-            'ends_at' => $input['ends_at'] !== '' ? $input['ends_at'] : null,
+            'starts_at' => deal_normalize_datetime($input['starts_at']),
+            'ends_at' => deal_normalize_datetime($input['ends_at']),
             'sort_order' => $input['sort_order'],
             'status' => $input['status'],
         ]);
@@ -371,31 +483,12 @@ if ($method === 'PUT') {
     $input = deal_payload($payload);
     $itemsProvided = array_key_exists('items', $payload) || array_key_exists('deal_items', $payload);
 
-    if ($input['title'] === '') {
+    $errors = deal_validate_input($input);
+    if (!empty($errors)) {
         json_response([
             'success' => false,
-            'message' => 'Deal title is required.',
-        ], 422);
-    }
-
-    if ($input['description'] === '') {
-        json_response([
-            'success' => false,
-            'message' => 'Deal description is required.',
-        ], 422);
-    }
-
-    if ($input['image'] === '') {
-        json_response([
-            'success' => false,
-            'message' => 'Deal image is required.',
-        ], 422);
-    }
-
-    if ($input['regular_price'] <= 0 || $input['deal_price'] <= 0) {
-        json_response([
-            'success' => false,
-            'message' => 'Deal prices must be greater than zero.',
+            'message' => 'Validation error.',
+            'errors' => $errors,
         ], 422);
     }
 
@@ -440,8 +533,8 @@ if ($method === 'PUT') {
             'deal_price' => $input['deal_price'],
             'image' => $input['image'],
             'badge_text' => $input['badge_text'] !== '' ? $input['badge_text'] : null,
-            'starts_at' => $input['starts_at'] !== '' ? $input['starts_at'] : null,
-            'ends_at' => $input['ends_at'] !== '' ? $input['ends_at'] : null,
+            'starts_at' => deal_normalize_datetime($input['starts_at']),
+            'ends_at' => deal_normalize_datetime($input['ends_at']),
             'sort_order' => $input['sort_order'],
             'status' => $input['status'],
             'id' => $id,
