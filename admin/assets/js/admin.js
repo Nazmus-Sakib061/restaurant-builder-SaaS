@@ -53,6 +53,22 @@ const menuItemFeaturedField = document.getElementById("menuItemFeaturedField");
 const menuItemAvailableField = document.getElementById("menuItemAvailableField");
 const menuItemSortField = document.getElementById("menuItemSortField");
 const menuItemStatusField = document.getElementById("menuItemStatusField");
+const dealTableBody = document.getElementById("dealTableBody");
+const dealForm = document.getElementById("dealForm");
+const dealFeedback = document.getElementById("dealFeedback");
+const dealSaveButton = document.getElementById("dealSaveButton");
+const dealCreateResetButtons = Array.from(document.querySelectorAll('[data-action="reset-deal-form"]'));
+const dealIdField = document.getElementById("dealIdField");
+const dealTitleField = document.getElementById("dealTitleField");
+const dealDescriptionField = document.getElementById("dealDescriptionField");
+const dealBadgeField = document.getElementById("dealBadgeField");
+const dealRegularPriceField = document.getElementById("dealRegularPriceField");
+const dealPriceField = document.getElementById("dealPriceField");
+const dealImageField = document.getElementById("dealImageField");
+const dealStartsAtField = document.getElementById("dealStartsAtField");
+const dealEndsAtField = document.getElementById("dealEndsAtField");
+const dealSortField = document.getElementById("dealSortField");
+const dealStatusField = document.getElementById("dealStatusField");
 
 const demoCredentials = {
   username: "admin",
@@ -120,6 +136,7 @@ let currentRestaurant = null;
 let currentSettings = null;
 let currentCategories = [];
 let currentMenuItems = [];
+let currentDeals = [];
 
 const buildApiUrl = (endpoint, params = {}) => {
   const query = new URLSearchParams();
@@ -313,7 +330,7 @@ const renderOrders = () => {
     statFoods.textContent = String(currentMenuItems.length);
   }
   if (statDeals) {
-    statDeals.textContent = "3";
+    statDeals.textContent = String(currentDeals.length);
   }
   if (statRevenue) {
     statRevenue.textContent = `$${(orders.length * 18.5).toFixed(0)}`;
@@ -629,12 +646,14 @@ const loadRestaurants = async () => {
     await loadSettingsForRestaurant(selectedSlug);
     await loadCategoriesForRestaurant(selectedSlug);
     await loadMenuItemsForRestaurant(selectedSlug);
+    await loadDealsForRestaurant(selectedSlug);
   } catch (error) {
     loadedRestaurants = [{ id: 1, name: "Demo Pizza House", slug: "demo-pizza-house", business_type: "pizza" }];
     populateRestaurantSelect(loadedRestaurants, preferredSlug);
     await loadSettingsForRestaurant(restaurantSelect.value || "demo-pizza-house");
     await loadCategoriesForRestaurant(restaurantSelect.value || "demo-pizza-house");
     await loadMenuItemsForRestaurant(restaurantSelect.value || "demo-pizza-house");
+    await loadDealsForRestaurant(restaurantSelect.value || "demo-pizza-house");
     showSettingsFeedback(`Loaded fallback restaurant list because the API was unavailable.`, "error");
     console.warn("Restaurant list fallback:", error.message);
   }
@@ -1002,6 +1021,309 @@ const resetMenuItemForm = () => {
   showMenuItemFeedback("");
 };
 
+const showDealFeedback = (message, state = "success") => {
+  if (!dealFeedback) {
+    return;
+  }
+
+  dealFeedback.textContent = message;
+  dealFeedback.classList.toggle("is-error", state === "error");
+};
+
+const setDealButtonLoading = (loading) => {
+  if (!dealSaveButton) {
+    return;
+  }
+
+  dealSaveButton.disabled = loading;
+  dealSaveButton.textContent = loading ? "Saving..." : (dealIdField?.value ? "Update Deal" : "Save Deal");
+};
+
+const normalizeDateTimeLocalValue = (value) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  const match = normalized.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::(\d{2}))?$/);
+  if (match) {
+    return `${match[1]}T${match[2]}`;
+  }
+
+  return normalized.includes("T") ? normalized.slice(0, 16) : normalized.replace(" ", "T").slice(0, 16);
+};
+
+const prepareDealDateTimeForApi = (value) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  const match = normalized.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::(\d{2}))?$/);
+  if (match) {
+    return `${match[1]} ${match[2]}:${match[3] || "00"}`;
+  }
+
+  return normalized.replace("T", " ");
+};
+
+const getDealFormPayload = () => ({
+  id: String(dealIdField?.value || "").trim(),
+  title: String(dealTitleField?.value || "").trim(),
+  description: String(dealDescriptionField?.value || "").trim(),
+  badge_text: String(dealBadgeField?.value || "").trim(),
+  regular_price: String(dealRegularPriceField?.value || "").trim(),
+  deal_price: String(dealPriceField?.value || "").trim(),
+  image: String(dealImageField?.value || "").trim(),
+  starts_at: normalizeDateTimeLocalValue(dealStartsAtField?.value || ""),
+  ends_at: normalizeDateTimeLocalValue(dealEndsAtField?.value || ""),
+  sort_order: String(dealSortField?.value || "").trim(),
+  status: String(dealStatusField?.value || "active").trim()
+});
+
+const validateDealFormPayload = (payload) => {
+  const errors = {};
+
+  if (!payload.title) {
+    errors.title = "Deal title is required.";
+  } else if (payload.title.length > 150) {
+    errors.title = "Deal title must be 150 characters or fewer.";
+  }
+
+  if (!payload.description) {
+    errors.description = "Deal description is required.";
+  }
+
+  if (payload.badge_text.length > 100) {
+    errors.badge_text = "Badge text must be 100 characters or fewer.";
+  }
+
+  if (!payload.regular_price || Number.isNaN(Number(payload.regular_price)) || Number(payload.regular_price) <= 0) {
+    errors.regular_price = "Regular price is required and must be greater than zero.";
+  }
+
+  if (!payload.deal_price || Number.isNaN(Number(payload.deal_price)) || Number(payload.deal_price) <= 0) {
+    errors.deal_price = "Deal price is required and must be greater than zero.";
+  }
+
+  if (!Number.isNaN(Number(payload.regular_price)) && !Number.isNaN(Number(payload.deal_price)) && Number(payload.deal_price) >= Number(payload.regular_price)) {
+    errors.deal_price = "Deal price must be less than the regular price.";
+  }
+
+  if (!payload.image) {
+    errors.image = "Image path is required.";
+  } else if (payload.image.length > 255) {
+    errors.image = "Image path must be 255 characters or fewer.";
+  }
+
+  if (!isNonNegativeInteger(payload.sort_order)) {
+    errors.sort_order = "Sort order must be a whole number.";
+  }
+
+  if (!["active", "inactive"].includes(payload.status)) {
+    errors.status = "Invalid status selected.";
+  }
+
+  return errors;
+};
+
+const fillDealForm = (deal = {}) => {
+  if (!dealForm) {
+    return;
+  }
+
+  dealIdField.value = deal.id ? String(deal.id) : "";
+  dealTitleField.value = deal.title || "";
+  dealDescriptionField.value = deal.description || "";
+  dealBadgeField.value = deal.badge_text || "";
+  dealRegularPriceField.value = deal.regular_price ?? "";
+  dealPriceField.value = deal.deal_price ?? "";
+  dealImageField.value = deal.image || "";
+  dealStartsAtField.value = normalizeDateTimeLocalValue(deal.starts_at || "");
+  dealEndsAtField.value = normalizeDateTimeLocalValue(deal.ends_at || "");
+  dealSortField.value = deal.sort_order ?? 0;
+  dealStatusField.value = deal.status || "active";
+
+  if (dealSaveButton) {
+    dealSaveButton.textContent = deal.id ? "Update Deal" : "Save Deal";
+  }
+};
+
+const resetDealForm = () => {
+  fillDealForm({});
+  if (dealForm) {
+    dealForm.reset();
+  }
+  if (dealSortField) {
+    dealSortField.value = 0;
+  }
+  if (dealStatusField) {
+    dealStatusField.value = "active";
+  }
+  if (dealSaveButton) {
+    dealSaveButton.textContent = "Save Deal";
+  }
+  showDealFeedback("");
+};
+
+const renderDeals = () => {
+  if (!dealTableBody) {
+    return;
+  }
+
+  if (statDeals) {
+    statDeals.textContent = String(currentDeals.length);
+  }
+
+  if (!currentDeals.length) {
+    dealTableBody.innerHTML = `
+      <tr>
+        <td colspan="6">No deals found for this restaurant yet.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  dealTableBody.innerHTML = currentDeals.map((deal) => {
+    const hasDiscount = Number(deal.deal_price) > 0 && Number(deal.regular_price) > Number(deal.deal_price);
+    const priceMarkup = hasDiscount
+      ? `<strong>${escapeHTML(formatCurrency(deal.deal_price))}</strong><small class="table-meta">Was ${escapeHTML(formatCurrency(deal.regular_price))}</small>`
+      : `<strong>${escapeHTML(formatCurrency(deal.deal_price || deal.regular_price))}</strong>`;
+
+    return `
+      <tr>
+        <td>
+          <strong>${escapeHTML(deal.title)}</strong>
+          ${deal.description ? `<small class="table-meta">${escapeHTML(deal.description)}</small>` : ""}
+        </td>
+        <td>${priceMarkup}</td>
+        <td>${escapeHTML(deal.badge_text || "-")}</td>
+        <td>${escapeHTML(deal.sort_order ?? 0)}</td>
+        <td><span class="status-badge status-badge--${deal.status === "active" ? "active" : "inactive"}">${escapeHTML(deal.status || "active")}</span></td>
+        <td>
+          <div class="table-actions">
+            <button type="button" class="btn btn--ghost btn--compact table-action" data-action="edit-deal" data-id="${deal.id}">Edit</button>
+            <button type="button" class="btn btn--ghost btn--compact table-action table-action--danger" data-action="delete-deal" data-id="${deal.id}">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+};
+
+const loadDealsForRestaurant = async (slug) => {
+  const resolvedSlug = slug || "demo-pizza-house";
+  try {
+    const result = await fetchJson("deals.php", {
+      params: { restaurant: resolvedSlug, include_inactive: 1 }
+    });
+
+    currentDeals = Array.isArray(result.data) ? result.data : [];
+    renderDeals();
+  } catch (error) {
+    currentDeals = [];
+    renderDeals();
+    showDealFeedback(error.message || "Unable to load deals.", "error");
+  }
+};
+
+const saveDeal = async (event) => {
+  event.preventDefault();
+
+  if (!restaurantSelect || !dealForm) {
+    return;
+  }
+
+  const selectedSlug = restaurantSelect.value || "demo-pizza-house";
+  const payload = getDealFormPayload();
+  const errors = validateDealFormPayload(payload);
+
+  if (Object.keys(errors).length > 0) {
+    showDealFeedback("Validation error. Check the highlighted fields.", "error");
+    focusFirstInvalidField(dealForm, errors);
+    return;
+  }
+
+  setDealButtonLoading(true);
+  showDealFeedback("Saving deal...");
+
+  try {
+    const method = payload.id ? "PUT" : "POST";
+    const result = await fetchJson("deals.php", {
+      method,
+      params: { restaurant: selectedSlug },
+      body: {
+        ...payload,
+        starts_at: prepareDealDateTimeForApi(payload.starts_at),
+        ends_at: prepareDealDateTimeForApi(payload.ends_at)
+      },
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
+    });
+
+    showDealFeedback(result.message || "Deal saved successfully.");
+    resetDealForm();
+    await loadDealsForRestaurant(selectedSlug);
+  } catch (error) {
+    showDealFeedback(error.message || "Could not save deal.", "error");
+    if (error.details) {
+      focusFirstInvalidField(dealForm, error.details);
+    }
+  } finally {
+    setDealButtonLoading(false);
+  }
+};
+
+const editDeal = (id) => {
+  const deal = currentDeals.find((item) => String(item.id) === String(id));
+  if (!deal) {
+    showDealFeedback("Deal not found.", "error");
+    return;
+  }
+
+  fillDealForm(deal);
+  showDealFeedback(`Editing ${deal.title}.`);
+  dealForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+const deleteDeal = async (id) => {
+  const deal = currentDeals.find((item) => String(item.id) === String(id));
+  if (!deal) {
+    showDealFeedback("Deal not found.", "error");
+    return;
+  }
+
+  if (!window.confirm(`Archive "${deal.title}"? This will set the deal to inactive.`)) {
+    return;
+  }
+
+  const selectedSlug = restaurantSelect?.value || "demo-pizza-house";
+  setDealButtonLoading(true);
+  showDealFeedback("Deleting deal...");
+
+  try {
+    const result = await fetchJson("deals.php", {
+      method: "DELETE",
+      params: { restaurant: selectedSlug },
+      body: { id: deal.id },
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
+    });
+
+    showDealFeedback(result.message || "Deal archived successfully.");
+    if (String(dealIdField?.value || "") === String(deal.id)) {
+      resetDealForm();
+    }
+    await loadDealsForRestaurant(selectedSlug);
+  } catch (error) {
+    showDealFeedback(error.message || "Could not delete deal.", "error");
+  } finally {
+    setDealButtonLoading(false);
+  }
+};
+
 const renderMenuItems = () => {
   if (!menuItemTableBody) {
     return;
@@ -1332,9 +1654,11 @@ if (settingsForm && restaurantSelect) {
     updatePublicPreviewLink(nextSlug);
     resetCategoryForm();
     resetMenuItemForm();
+    resetDealForm();
     loadSettingsForRestaurant(nextSlug);
     loadCategoriesForRestaurant(nextSlug);
     loadMenuItemsForRestaurant(nextSlug);
+    loadDealsForRestaurant(nextSlug);
   });
 }
 
@@ -1346,6 +1670,10 @@ if (menuItemForm) {
   menuItemForm.addEventListener("submit", saveMenuItem);
 }
 
+if (dealForm) {
+  dealForm.addEventListener("submit", saveDeal);
+}
+
 categoryCreateResetButtons.forEach((button) => {
   button.addEventListener("click", () => {
     resetCategoryForm();
@@ -1355,6 +1683,12 @@ categoryCreateResetButtons.forEach((button) => {
 menuItemCreateResetButtons.forEach((button) => {
   button.addEventListener("click", () => {
     resetMenuItemForm();
+  });
+});
+
+dealCreateResetButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    resetDealForm();
   });
 });
 
@@ -1385,6 +1719,21 @@ menuItemTableBody?.addEventListener("click", (event) => {
   }
   if (action === "delete-menu-item") {
     deleteMenuItem(id);
+  }
+});
+
+dealTableBody?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-action]");
+  if (!button) {
+    return;
+  }
+
+  const { action, id } = button.dataset;
+  if (action === "edit-deal") {
+    editDeal(id);
+  }
+  if (action === "delete-deal") {
+    deleteDeal(id);
   }
 });
 

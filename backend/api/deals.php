@@ -166,18 +166,42 @@ function normalize_deal_items_payload(PDO $pdo, int $restaurantId, mixed $itemsP
 }
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-api_require_write_enabled($method);
 $pdo = require_connection();
 $restaurant = restaurant_context();
 $restaurantId = (int) $restaurant['restaurant_id'];
 
 if ($method === 'GET') {
     $id = input_id();
+    $includeInactive = false;
+    $includeInactiveError = null;
+
+    if (array_key_exists('include_inactive', $_GET)) {
+        $includeInactive = query_bool_param('include_inactive', $includeInactiveError);
+        if ($includeInactiveError !== null) {
+            json_response([
+                'success' => false,
+                'message' => 'Validation error.',
+                'errors' => [
+                    'include_inactive' => $includeInactiveError,
+                ],
+            ], 422);
+        }
+    }
+
+    if (array_key_exists('id', $_GET) && $id === null) {
+        json_response([
+            'success' => false,
+            'message' => 'Validation error.',
+            'errors' => [
+                'id' => 'Invalid id.',
+            ],
+        ], 422);
+    }
 
     if ($id) {
         $deal = deal_snapshot($pdo, $restaurantId, $id);
 
-        if ($deal === null || (string) $deal['status'] !== 'active') {
+        if ($deal === null || ((!$includeInactive) && (string) $deal['status'] !== 'active')) {
             json_response([
                 'success' => false,
                 'message' => 'Deal not found.',
@@ -194,7 +218,7 @@ if ($method === 'GET') {
         'SELECT id, restaurant_id, title, slug, description, regular_price, deal_price, image, badge_text, starts_at, ends_at, sort_order, status, created_at, updated_at
          FROM deals
          WHERE restaurant_id = :restaurant_id
-           AND status = "active"
+           ' . ($includeInactive ? '' : 'AND status = "active"') . '
          ORDER BY sort_order ASC, title ASC, created_at DESC'
     );
     $statement->execute(['restaurant_id' => $restaurantId]);
@@ -211,6 +235,10 @@ if ($method === 'GET') {
         'success' => true,
         'data' => $deals,
     ]);
+}
+
+if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+    require_admin_write_access();
 }
 
 if ($method === 'POST') {
