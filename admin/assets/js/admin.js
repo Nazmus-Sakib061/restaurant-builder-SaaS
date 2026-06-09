@@ -69,6 +69,18 @@ const dealStartsAtField = document.getElementById("dealStartsAtField");
 const dealEndsAtField = document.getElementById("dealEndsAtField");
 const dealSortField = document.getElementById("dealSortField");
 const dealStatusField = document.getElementById("dealStatusField");
+const galleryTableBody = document.getElementById("galleryTableBody");
+const galleryForm = document.getElementById("galleryForm");
+const galleryFeedback = document.getElementById("galleryFeedback");
+const gallerySaveButton = document.getElementById("gallerySaveButton");
+const galleryCreateResetButtons = Array.from(document.querySelectorAll('[data-action="reset-gallery-form"]'));
+const galleryIdField = document.getElementById("galleryIdField");
+const galleryTitleField = document.getElementById("galleryTitleField");
+const galleryCaptionField = document.getElementById("galleryCaptionField");
+const galleryImageField = document.getElementById("galleryImageField");
+const galleryAltField = document.getElementById("galleryAltField");
+const gallerySortField = document.getElementById("gallerySortField");
+const galleryStatusField = document.getElementById("galleryStatusField");
 
 const demoCredentials = {
   username: "admin",
@@ -137,6 +149,7 @@ let currentSettings = null;
 let currentCategories = [];
 let currentMenuItems = [];
 let currentDeals = [];
+let currentGallery = [];
 
 const buildApiUrl = (endpoint, params = {}) => {
   const query = new URLSearchParams();
@@ -647,6 +660,7 @@ const loadRestaurants = async () => {
     await loadCategoriesForRestaurant(selectedSlug);
     await loadMenuItemsForRestaurant(selectedSlug);
     await loadDealsForRestaurant(selectedSlug);
+    await loadGalleryForRestaurant(selectedSlug);
   } catch (error) {
     loadedRestaurants = [{ id: 1, name: "Demo Pizza House", slug: "demo-pizza-house", business_type: "pizza" }];
     populateRestaurantSelect(loadedRestaurants, preferredSlug);
@@ -654,6 +668,7 @@ const loadRestaurants = async () => {
     await loadCategoriesForRestaurant(restaurantSelect.value || "demo-pizza-house");
     await loadMenuItemsForRestaurant(restaurantSelect.value || "demo-pizza-house");
     await loadDealsForRestaurant(restaurantSelect.value || "demo-pizza-house");
+    await loadGalleryForRestaurant(restaurantSelect.value || "demo-pizza-house");
     showSettingsFeedback(`Loaded fallback restaurant list because the API was unavailable.`, "error");
     console.warn("Restaurant list fallback:", error.message);
   }
@@ -1324,6 +1339,250 @@ const deleteDeal = async (id) => {
   }
 };
 
+const showGalleryFeedback = (message, state = "success") => {
+  if (!galleryFeedback) {
+    return;
+  }
+
+  galleryFeedback.textContent = message;
+  galleryFeedback.classList.toggle("is-error", state === "error");
+};
+
+const setGalleryButtonLoading = (loading) => {
+  if (!gallerySaveButton) {
+    return;
+  }
+
+  gallerySaveButton.disabled = loading;
+  gallerySaveButton.textContent = loading ? "Saving..." : (galleryIdField?.value ? "Update Gallery Item" : "Save Gallery Item");
+};
+
+const getGalleryFormPayload = () => ({
+  id: String(galleryIdField?.value || "").trim(),
+  title: String(galleryTitleField?.value || "").trim(),
+  caption: String(galleryCaptionField?.value || "").trim(),
+  image: String(galleryImageField?.value || "").trim(),
+  alt_text: String(galleryAltField?.value || "").trim(),
+  sort_order: String(gallerySortField?.value || "").trim(),
+  status: String(galleryStatusField?.value || "active").trim()
+});
+
+const validateGalleryFormPayload = (payload) => {
+  const errors = {};
+
+  if (!payload.title) {
+    errors.title = "Gallery title is required.";
+  } else if (payload.title.length > 150) {
+    errors.title = "Gallery title must be 150 characters or fewer.";
+  }
+
+  if (payload.caption.length > 1000) {
+    errors.caption = "Caption must be 1000 characters or fewer.";
+  }
+
+  if (!payload.image) {
+    errors.image = "Gallery image is required.";
+  } else if (payload.image.length > 255) {
+    errors.image = "Image path must be 255 characters or fewer.";
+  }
+
+  if (payload.alt_text.length > 255) {
+    errors.alt_text = "Alt text must be 255 characters or fewer.";
+  }
+
+  if (payload.sort_order === "") {
+    errors.sort_order = "Sort order is required.";
+  } else if (!/^[+-]?\d+$/.test(payload.sort_order)) {
+    errors.sort_order = "Sort order must be a whole number.";
+  } else if (Number(payload.sort_order) < 0) {
+    errors.sort_order = "Sort order must be zero or greater.";
+  }
+
+  if (!["active", "inactive"].includes(payload.status)) {
+    errors.status = "Invalid status selected.";
+  }
+
+  return errors;
+};
+
+const fillGalleryForm = (gallery = {}) => {
+  if (!galleryForm) {
+    return;
+  }
+
+  galleryIdField.value = gallery.id ? String(gallery.id) : "";
+  galleryTitleField.value = gallery.title || "";
+  galleryCaptionField.value = gallery.caption || "";
+  galleryImageField.value = gallery.image || "";
+  galleryAltField.value = gallery.alt_text || "";
+  gallerySortField.value = gallery.sort_order ?? 0;
+  galleryStatusField.value = gallery.status || "active";
+
+  if (gallerySaveButton) {
+    gallerySaveButton.textContent = gallery.id ? "Update Gallery Item" : "Save Gallery Item";
+  }
+};
+
+const resetGalleryForm = () => {
+  fillGalleryForm({});
+  if (galleryForm) {
+    galleryForm.reset();
+  }
+  if (gallerySortField) {
+    gallerySortField.value = 0;
+  }
+  if (galleryStatusField) {
+    galleryStatusField.value = "active";
+  }
+  if (gallerySaveButton) {
+    gallerySaveButton.textContent = "Save Gallery Item";
+  }
+  showGalleryFeedback("");
+};
+
+const renderGallery = () => {
+  if (!galleryTableBody) {
+    return;
+  }
+
+  if (!currentGallery.length) {
+    galleryTableBody.innerHTML = `
+      <tr>
+        <td colspan="6">No gallery items found for this restaurant yet.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  galleryTableBody.innerHTML = currentGallery.map((gallery) => `
+    <tr>
+      <td>
+        <strong>${escapeHTML(gallery.title)}</strong>
+        ${gallery.caption ? `<small class="table-meta">${escapeHTML(gallery.caption)}</small>` : ""}
+      </td>
+      <td>${escapeHTML(gallery.image || "-")}</td>
+      <td>${escapeHTML(gallery.alt_text || "-")}</td>
+      <td>${escapeHTML(gallery.sort_order ?? 0)}</td>
+      <td><span class="status-badge status-badge--${gallery.status === "active" ? "active" : "inactive"}">${escapeHTML(gallery.status || "active")}</span></td>
+      <td>
+        <div class="table-actions">
+          <button type="button" class="btn btn--ghost btn--compact table-action" data-action="edit-gallery" data-id="${gallery.id}">Edit</button>
+          <button type="button" class="btn btn--ghost btn--compact table-action table-action--danger" data-action="delete-gallery" data-id="${gallery.id}">Delete</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+};
+
+const loadGalleryForRestaurant = async (slug) => {
+  const resolvedSlug = slug || "demo-pizza-house";
+  try {
+    const result = await fetchJson("gallery.php", {
+      params: { restaurant: resolvedSlug, include_inactive: 1 }
+    });
+
+    currentGallery = Array.isArray(result.data) ? result.data : [];
+    renderGallery();
+  } catch (error) {
+    currentGallery = [];
+    renderGallery();
+    showGalleryFeedback(error.message || "Unable to load gallery items.", "error");
+  }
+};
+
+const saveGallery = async (event) => {
+  event.preventDefault();
+
+  if (!restaurantSelect || !galleryForm) {
+    return;
+  }
+
+  const selectedSlug = restaurantSelect.value || "demo-pizza-house";
+  const payload = getGalleryFormPayload();
+  const errors = validateGalleryFormPayload(payload);
+
+  if (Object.keys(errors).length > 0) {
+    showGalleryFeedback("Validation error. Check the highlighted fields.", "error");
+    focusFirstInvalidField(galleryForm, errors);
+    return;
+  }
+
+  setGalleryButtonLoading(true);
+  showGalleryFeedback("Saving gallery item...");
+
+  try {
+    const method = payload.id ? "PUT" : "POST";
+    const result = await fetchJson("gallery.php", {
+      method,
+      params: { restaurant: selectedSlug },
+      body: payload,
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
+    });
+
+    showGalleryFeedback(result.message || "Gallery item saved successfully.");
+    resetGalleryForm();
+    await loadGalleryForRestaurant(selectedSlug);
+  } catch (error) {
+    showGalleryFeedback(error.message || "Could not save gallery item.", "error");
+    if (error.details) {
+      focusFirstInvalidField(galleryForm, error.details);
+    }
+  } finally {
+    setGalleryButtonLoading(false);
+  }
+};
+
+const editGallery = (id) => {
+  const gallery = currentGallery.find((item) => String(item.id) === String(id));
+  if (!gallery) {
+    showGalleryFeedback("Gallery item not found.", "error");
+    return;
+  }
+
+  fillGalleryForm(gallery);
+  showGalleryFeedback(`Editing ${gallery.title}.`);
+  galleryForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+const deleteGallery = async (id) => {
+  const gallery = currentGallery.find((item) => String(item.id) === String(id));
+  if (!gallery) {
+    showGalleryFeedback("Gallery item not found.", "error");
+    return;
+  }
+
+  if (!window.confirm(`Archive "${gallery.title}"? This will set the gallery item to inactive.`)) {
+    return;
+  }
+
+  const selectedSlug = restaurantSelect?.value || "demo-pizza-house";
+  setGalleryButtonLoading(true);
+  showGalleryFeedback("Deleting gallery item...");
+
+  try {
+    const result = await fetchJson("gallery.php", {
+      method: "DELETE",
+      params: { restaurant: selectedSlug },
+      body: { id: gallery.id },
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
+    });
+
+    showGalleryFeedback(result.message || "Gallery item archived successfully.");
+    if (String(galleryIdField?.value || "") === String(gallery.id)) {
+      resetGalleryForm();
+    }
+    await loadGalleryForRestaurant(selectedSlug);
+  } catch (error) {
+    showGalleryFeedback(error.message || "Could not delete gallery item.", "error");
+  } finally {
+    setGalleryButtonLoading(false);
+  }
+};
+
 const renderMenuItems = () => {
   if (!menuItemTableBody) {
     return;
@@ -1415,6 +1674,7 @@ const refreshRestaurantCrudData = async (slug) => {
   await loadCategoriesForRestaurant(resolvedSlug);
   await loadMenuItemsForRestaurant(resolvedSlug);
   await loadDealsForRestaurant(resolvedSlug);
+  await loadGalleryForRestaurant(resolvedSlug);
 };
 
 const saveCategory = async (event) => {
@@ -1656,10 +1916,12 @@ if (settingsForm && restaurantSelect) {
     resetCategoryForm();
     resetMenuItemForm();
     resetDealForm();
+    resetGalleryForm();
     loadSettingsForRestaurant(nextSlug);
     loadCategoriesForRestaurant(nextSlug);
     loadMenuItemsForRestaurant(nextSlug);
     loadDealsForRestaurant(nextSlug);
+    loadGalleryForRestaurant(nextSlug);
   });
 }
 
@@ -1673,6 +1935,10 @@ if (menuItemForm) {
 
 if (dealForm) {
   dealForm.addEventListener("submit", saveDeal);
+}
+
+if (galleryForm) {
+  galleryForm.addEventListener("submit", saveGallery);
 }
 
 categoryCreateResetButtons.forEach((button) => {
@@ -1690,6 +1956,12 @@ menuItemCreateResetButtons.forEach((button) => {
 dealCreateResetButtons.forEach((button) => {
   button.addEventListener("click", () => {
     resetDealForm();
+  });
+});
+
+galleryCreateResetButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    resetGalleryForm();
   });
 });
 
@@ -1735,6 +2007,21 @@ dealTableBody?.addEventListener("click", (event) => {
   }
   if (action === "delete-deal") {
     deleteDeal(id);
+  }
+});
+
+galleryTableBody?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-action]");
+  if (!button) {
+    return;
+  }
+
+  const { action, id } = button.dataset;
+  if (action === "edit-gallery") {
+    editGallery(id);
+  }
+  if (action === "delete-gallery") {
+    deleteGallery(id);
   }
 });
 

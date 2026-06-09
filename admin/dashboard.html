@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Pizza House admin dashboard demo for future CRUD management.">
   <title>Pizza House Admin | Dashboard</title>
-  <link rel="stylesheet" href="assets/css/admin.css?v=deals-crud-1">
+  <link rel="stylesheet" href="assets/css/admin.css?v=gallery-crud-1">
 </head>
 <body class="admin-page">
   <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
@@ -36,6 +36,7 @@
         <a href="#menuSnapshot" class="admin-nav__link">Menu</a>
         <a href="#categories" class="admin-nav__link">Categories</a>
         <a href="#deals" class="admin-nav__link">Deals</a>
+        <a href="#gallery" class="admin-nav__link">Gallery</a>
         <a href="#settings" class="admin-nav__link">Website Settings</a>
       </nav>
 
@@ -389,6 +390,77 @@
           </form>
         </section>
 
+        <section class="panel panel--wide" id="gallery">
+          <div class="panel__header">
+            <div>
+              <span class="panel__eyebrow">Gallery</span>
+              <h2>Gallery Images</h2>
+            </div>
+          </div>
+          <p class="panel__note">Gallery items are loaded for the selected restaurant and archived items stay available for editing.</p>
+          <p class="settings-feedback" id="galleryFeedback" aria-live="polite"></p>
+          <div class="table-wrap">
+            <table class="admin-table admin-table--compact">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Image</th>
+                  <th>Alt Text</th>
+                  <th>Sort</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="galleryTableBody"></tbody>
+            </table>
+          </div>
+
+          <form id="galleryForm" class="settings-form settings-form--compact" novalidate>
+            <input type="hidden" id="galleryIdField" name="id" value="">
+            <div class="settings-group">
+              <div class="settings-group__header">
+                <h3>Gallery Details</h3>
+                <button type="button" class="btn btn--ghost btn--compact" id="galleryCreateReset" data-action="reset-gallery-form">
+                  Add New
+                </button>
+              </div>
+              <div class="field-grid">
+                <div class="form-group">
+                  <label for="galleryTitleField">Title</label>
+                  <input id="galleryTitleField" class="field-control" name="title" type="text" maxlength="150">
+                </div>
+                <div class="form-group">
+                  <label for="galleryImageField">Image Path / URL</label>
+                  <input id="galleryImageField" class="field-control" name="image" type="text" placeholder="images/hero image.png">
+                </div>
+                <div class="form-group">
+                  <label for="galleryAltField">Alt Text</label>
+                  <input id="galleryAltField" class="field-control" name="alt_text" type="text" maxlength="255">
+                </div>
+                <div class="form-group">
+                  <label for="gallerySortField">Sort Order</label>
+                  <input id="gallerySortField" class="field-control" name="sort_order" type="number" step="1" min="0" value="0">
+                </div>
+                <div class="form-group form-group--full">
+                  <label for="galleryCaptionField">Caption / Description</label>
+                  <textarea id="galleryCaptionField" class="field-control" name="caption" rows="4" placeholder="Short gallery caption"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="galleryStatusField">Status</label>
+                  <select id="galleryStatusField" class="field-control" name="status">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="settings-actions">
+              <button type="submit" class="btn btn--primary" id="gallerySaveButton">Save Gallery Item</button>
+              <button type="button" class="btn btn--ghost" id="galleryCancelButton" data-action="reset-gallery-form">Reset</button>
+            </div>
+          </form>
+        </section>
+
         <section class="panel panel--wide" id="settings">
           <div class="panel__header">
             <div>
@@ -566,6 +638,6 @@
     </div>
   </div>
 
-  <script src="assets/js/admin.js?v=deals-crud-1"></script>
+  <script src="assets/js/admin.js?v=gallery-crud-1"></script>
 </body>
 </html>

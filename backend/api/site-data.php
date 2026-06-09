@@ -159,6 +159,7 @@ function site_data_public_gallery(array $gallery): array
     return array_map(static function (array $image): array {
         return [
             'title' => $image['title'] ?? '',
+            'caption' => $image['caption'] ?? null,
             'image' => $image['image'] ?? '',
             'alt_text' => $image['alt_text'] ?? null,
             'status' => $image['status'] ?? 'active',
@@ -237,7 +238,7 @@ $dealsStatement->execute(['restaurant_id' => $restaurantId]);
 $deals = $dealsStatement->fetchAll();
 
 $galleryStatement = $pdo->prepare(
-    'SELECT id, restaurant_id, title, image, alt_text, sort_order, status, created_at, updated_at
+    'SELECT id, restaurant_id, title, caption, image, alt_text, sort_order, status, created_at, updated_at
      FROM gallery_images
      WHERE restaurant_id = :restaurant_id
        AND status = "active"
