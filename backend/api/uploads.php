@@ -59,13 +59,13 @@ function upload_original_extension(string $originalName): ?string
     return preg_match('/^[a-z0-9]+$/', $extension) ? $extension : null;
 }
 
-function upload_target_directory(string $restaurantSlug, string $purpose): array
+function upload_target_directory(int $restaurantId, string $purpose): array
 {
     $projectRoot = dirname(__DIR__, 2);
     $uploadRoot = $projectRoot . DIRECTORY_SEPARATOR . 'uploads';
     $targetDirectory = $uploadRoot
         . DIRECTORY_SEPARATOR . 'restaurants'
-        . DIRECTORY_SEPARATOR . $restaurantSlug
+        . DIRECTORY_SEPARATOR . $restaurantId
         . DIRECTORY_SEPARATOR . $purpose;
 
     if (!is_dir($targetDirectory) && !mkdir($targetDirectory, 0755, true) && !is_dir($targetDirectory)) {
@@ -82,7 +82,7 @@ function upload_target_directory(string $restaurantSlug, string $purpose): array
         upload_error('Upload directory is not available.', [], 500);
     }
 
-    return [$resolvedTarget, "uploads/restaurants/{$restaurantSlug}/{$purpose}"];
+    return [$resolvedTarget, "uploads/restaurants/{$restaurantId}/{$purpose}"];
 }
 
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
@@ -96,8 +96,8 @@ if ($method !== 'POST') {
 
 require_admin_write_access();
 
-$pdo = require_connection();
 $restaurant = restaurant_context();
+$restaurantId = (int) $restaurant['restaurant_id'];
 $restaurantSlug = (string) $restaurant['slug'];
 $purpose = strtolower(trim((string) ($_POST['purpose'] ?? 'gallery')));
 
@@ -177,7 +177,7 @@ if (@getimagesize($temporaryPath) === false) {
     ]);
 }
 
-[$targetDirectory, $relativeDirectory] = upload_target_directory($restaurantSlug, $purpose);
+[$targetDirectory, $relativeDirectory] = upload_target_directory($restaurantId, $purpose);
 $extension = $allowedExtensions[0];
 
 do {
@@ -204,6 +204,7 @@ json_response([
         'file_name' => $fileName,
         'mime_type' => $detectedMime,
         'size' => $fileSize,
+        'restaurant_id' => $restaurantId,
         'restaurant' => $restaurantSlug,
         'purpose' => $purpose,
     ],

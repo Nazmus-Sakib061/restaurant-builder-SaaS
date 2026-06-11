@@ -342,6 +342,30 @@
     `;
   };
 
+  const createGalleryCard = (image) => {
+    const title = image.title || "Gallery Item";
+    const caption = image.caption || "";
+    const altText = image.alt_text || title || profile.restaurantName;
+
+    return `
+      <article class="gallery-card reveal">
+        <div class="gallery-card__media">
+          <img
+            src="${assetUrl(image.image)}"
+            alt="${escapeHTML(altText)}"
+            loading="lazy"
+            data-gallery-image
+            data-gallery-src="${escapeHTML(image.image)}"
+            data-gallery-alt="${escapeHTML(altText)}">
+        </div>
+        <div class="gallery-card__body">
+          <h3>${escapeHTML(title)}</h3>
+          ${caption ? `<p>${escapeHTML(caption)}</p>` : ""}
+        </div>
+      </article>
+    `;
+  };
+
   const renderMenu = () => {
     const filterBar = document.getElementById("menuFilters");
     const menuGrid = document.querySelector("[data-menu-grid]") || document.getElementById("menuGrid");
@@ -411,6 +435,38 @@
     }
   };
 
+  const renderGallery = () => {
+    const gallerySection = document.querySelector("[data-gallery-section]") || document.getElementById("gallery");
+    const galleryGrid = document.querySelector("[data-gallery-grid]") || document.getElementById("galleryGrid");
+    const galleryItems = (profile.gallery || []).filter((item) => String(item.status || "active") === "active");
+
+    if (gallerySection) {
+      gallerySection.hidden = galleryItems.length === 0;
+    }
+
+    document.querySelectorAll("[data-gallery-link]").forEach((link) => {
+      link.hidden = galleryItems.length === 0;
+    });
+
+    if (!galleryGrid) {
+      return galleryItems;
+    }
+
+    galleryGrid.innerHTML = galleryItems.length
+      ? galleryItems.map((item) => createGalleryCard(item)).join("")
+      : "";
+
+    galleryGrid.querySelectorAll("[data-gallery-image]").forEach((img) => {
+      setImage(
+        img,
+        img.dataset.gallerySrc || "",
+        img.dataset.galleryAlt || `${profile.restaurantName} gallery image`
+      );
+    });
+
+    return galleryItems;
+  };
+
   const renderAbout = (menuItems) => {
     const about = profile.about || {};
     const itemImages = menuItems.map((item) => item.image).filter(Boolean);
@@ -468,6 +524,7 @@
     const { menuItems } = renderMenu();
     renderDeals();
     renderAbout(menuItems);
+    renderGallery();
     renderContact();
   };
 

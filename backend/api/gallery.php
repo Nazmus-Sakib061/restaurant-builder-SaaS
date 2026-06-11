@@ -35,7 +35,7 @@ function gallery_payload(array $payload): array
         'sort_order_raw' => $sortOrderRaw,
         'sort_order' => $sortOrderRaw === ''
             ? 0
-            : (preg_match('/^[+-]?\d+$/', $sortOrderRaw) ? (int) $sortOrderRaw : null),
+            : (preg_match('/^\d+$/', $sortOrderRaw) ? (int) $sortOrderRaw : null),
         'status_raw' => $statusRaw,
         'status' => $statusRaw === '' ? 'active' : strtolower($statusRaw),
     ];
@@ -67,10 +67,8 @@ function gallery_validate_input(array $input): array
 
     $sortOrderRaw = trim((string) ($input['sort_order_raw'] ?? ''));
     if ($sortOrderRaw !== '') {
-        if (!preg_match('/^[+-]?\d+$/', $sortOrderRaw)) {
+        if (!preg_match('/^\d+$/', $sortOrderRaw)) {
             $errors['sort_order'] = 'Sort order must be a whole number.';
-        } elseif ((int) $sortOrderRaw < 0) {
-            $errors['sort_order'] = 'Sort order must be zero or greater.';
         }
     }
 

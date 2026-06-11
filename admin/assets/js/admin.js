@@ -1405,7 +1405,7 @@ const getGalleryFormPayload = () => ({
   caption: String(galleryCaptionField?.value || "").trim(),
   image: String(galleryImageField?.value || "").trim(),
   alt_text: String(galleryAltField?.value || "").trim(),
-  sort_order: String(gallerySortField?.value || "").trim(),
+  sort_order: String(gallerySortField?.value ?? "").trim() || "0",
   status: String(galleryStatusField?.value || "active").trim()
 });
 
@@ -1432,12 +1432,9 @@ const validateGalleryFormPayload = (payload) => {
     errors.alt_text = "Alt text must be 255 characters or fewer.";
   }
 
-  if (payload.sort_order === "") {
-    errors.sort_order = "Sort order is required.";
-  } else if (!/^[+-]?\d+$/.test(payload.sort_order)) {
+  const sortOrder = String(payload.sort_order ?? "").trim() || "0";
+  if (!/^\d+$/.test(sortOrder)) {
     errors.sort_order = "Sort order must be a whole number.";
-  } else if (Number(payload.sort_order) < 0) {
-    errors.sort_order = "Sort order must be zero or greater.";
   }
 
   if (!["active", "inactive"].includes(payload.status)) {

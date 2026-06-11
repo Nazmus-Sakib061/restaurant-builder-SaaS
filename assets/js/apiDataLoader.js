@@ -11,6 +11,10 @@
     "demo-biryani-house": "biryani"
   };
 
+  const DEMO_TO_RESTAURANT = Object.fromEntries(
+    Object.entries(RESTAURANT_TO_DEMO).map(([restaurantSlug, demoKey]) => [demoKey, restaurantSlug])
+  );
+
   const slugify = (value) => String(value ?? "")
     .toLowerCase()
     .trim()
@@ -28,6 +32,19 @@
 
   const fallbackProfileForRestaurant = (restaurantSlug) => {
     return demoProfile(RESTAURANT_TO_DEMO[restaurantSlug] || DEFAULT_DEMO);
+  };
+
+  const fetchRestaurantProfile = async (restaurantSlug) => {
+    const response = await fetch(`backend/api/site-data.php?restaurant=${encodeURIComponent(restaurantSlug)}`, {
+      headers: { Accept: "application/json" }
+    });
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Restaurant API unavailable");
+    }
+
+    return result.data || {};
   };
 
   const mapDeal = (deal) => ({
@@ -129,23 +146,18 @@
     const params = new URLSearchParams(window.location.search);
     const restaurantSlug = params.get("restaurant");
     const demoKey = (params.get("demo") || DEFAULT_DEMO).toLowerCase();
+    const mappedRestaurantSlug = DEMO_TO_RESTAURANT[demoKey] || DEMO_TO_RESTAURANT[DEFAULT_DEMO] || "demo-pizza-house";
+    const requestedRestaurantSlug = restaurantSlug || mappedRestaurantSlug;
+    const fallbackSlug = restaurantSlug || mappedRestaurantSlug;
 
-    if (restaurantSlug) {
+    if (requestedRestaurantSlug) {
       try {
-        const response = await fetch(`backend/api/site-data.php?restaurant=${encodeURIComponent(restaurantSlug)}`, {
-          headers: { Accept: "application/json" }
-        });
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-          throw new Error(result.message || "Restaurant API unavailable");
-        }
-
-        window.renderRestaurantWebsite?.(mapApiDataToRestaurantProfile(result.data || {}));
+        const apiData = await fetchRestaurantProfile(requestedRestaurantSlug);
+        window.renderRestaurantWebsite?.(mapApiDataToRestaurantProfile(apiData));
         return;
       } catch (error) {
         console.warn("Restaurant API failed, loading demo fallback.", error.message);
-        window.renderRestaurantWebsite?.(fallbackProfileForRestaurant(restaurantSlug));
+        window.renderRestaurantWebsite?.(fallbackProfileForRestaurant(fallbackSlug));
         return;
       }
     }

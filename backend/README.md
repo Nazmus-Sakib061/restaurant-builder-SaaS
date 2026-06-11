@@ -76,7 +76,7 @@ Common response helpers live in `backend/api/_response.php`.
 - `backend/api/uploads.php`
   - `POST` restaurant-scoped Gallery image uploads
   - accepts JPG, PNG, and WebP images up to 3 MB
-  - stores files under `uploads/restaurants/{restaurant_slug}/gallery/`
+  - stores files under `uploads/restaurants/{restaurant_id}/gallery/`
   - returns a project-relative public path; it does not write an absolute server path to the database
 
 - `backend/api/orders.php`
