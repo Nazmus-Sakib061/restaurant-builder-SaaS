@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Pizza House admin dashboard demo for future CRUD management.">
   <title>Pizza House Admin | Dashboard</title>
-  <link rel="stylesheet" href="assets/css/admin.css?v=gallery-crud-1">
+  <link rel="stylesheet" href="assets/css/admin.css?v=image-upload-gallery-1">
 </head>
 <body class="admin-page">
   <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
@@ -434,6 +434,26 @@
                   <input id="galleryImageField" class="field-control" name="image" type="text" placeholder="images/hero image.png">
                 </div>
                 <div class="form-group">
+                  <label for="galleryUploadField">Upload Image</label>
+                  <div class="upload-control">
+                    <input
+                      id="galleryUploadField"
+                      class="field-control"
+                      name="gallery_upload"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                    >
+                    <button type="button" class="btn btn--ghost btn--compact" id="galleryUploadButton">
+                      Upload
+                    </button>
+                  </div>
+                  <small class="settings-note">JPG, PNG, or WebP. Maximum 3 MB.</small>
+                </div>
+                <div class="form-group gallery-preview" id="galleryPreview" hidden>
+                  <span class="gallery-preview__label">Image Preview</span>
+                  <img id="galleryPreviewImage" src="" alt="Selected gallery image preview">
+                </div>
+                <div class="form-group">
                   <label for="galleryAltField">Alt Text</label>
                   <input id="galleryAltField" class="field-control" name="alt_text" type="text" maxlength="255">
                 </div>
@@ -638,6 +658,6 @@
     </div>
   </div>
 
-  <script src="assets/js/admin.js?v=gallery-crud-1"></script>
+  <script src="assets/js/admin.js?v=image-upload-gallery-1"></script>
 </body>
 </html>

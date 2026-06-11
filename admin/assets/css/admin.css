@@ -650,6 +650,42 @@ button {
   font-size: 0.92rem;
 }
 
+.upload-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.upload-control input[type="file"] {
+  min-width: 0;
+  padding: 0.72rem;
+}
+
+.gallery-preview {
+  align-self: stretch;
+}
+
+.gallery-preview__label {
+  display: block;
+  margin-bottom: 0.55rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.gallery-preview img {
+  display: block;
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.42);
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -892,6 +928,10 @@ button {
   }
 
   .settings-item {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-control {
     grid-template-columns: 1fr;
   }
 }

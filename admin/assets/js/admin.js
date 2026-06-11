@@ -78,6 +78,10 @@ const galleryIdField = document.getElementById("galleryIdField");
 const galleryTitleField = document.getElementById("galleryTitleField");
 const galleryCaptionField = document.getElementById("galleryCaptionField");
 const galleryImageField = document.getElementById("galleryImageField");
+const galleryUploadField = document.getElementById("galleryUploadField");
+const galleryUploadButton = document.getElementById("galleryUploadButton");
+const galleryPreview = document.getElementById("galleryPreview");
+const galleryPreviewImage = document.getElementById("galleryPreviewImage");
 const galleryAltField = document.getElementById("galleryAltField");
 const gallerySortField = document.getElementById("gallerySortField");
 const galleryStatusField = document.getElementById("galleryStatusField");
@@ -1348,6 +1352,35 @@ const showGalleryFeedback = (message, state = "success") => {
   galleryFeedback.classList.toggle("is-error", state === "error");
 };
 
+const adminAssetUrl = (path) => {
+  const value = String(path || "").trim();
+  if (!value) {
+    return "";
+  }
+
+  if (/^(?:https?:|data:|blob:|\/)/i.test(value)) {
+    return value;
+  }
+
+  return `../${value.replace(/^(?:\.\/)+/, "")}`;
+};
+
+const updateGalleryPreview = (path) => {
+  if (!galleryPreview || !galleryPreviewImage) {
+    return;
+  }
+
+  const previewUrl = adminAssetUrl(path);
+  if (!previewUrl) {
+    galleryPreview.hidden = true;
+    galleryPreviewImage.removeAttribute("src");
+    return;
+  }
+
+  galleryPreview.hidden = false;
+  galleryPreviewImage.src = previewUrl;
+};
+
 const setGalleryButtonLoading = (loading) => {
   if (!gallerySaveButton) {
     return;
@@ -1355,6 +1388,15 @@ const setGalleryButtonLoading = (loading) => {
 
   gallerySaveButton.disabled = loading;
   gallerySaveButton.textContent = loading ? "Saving..." : (galleryIdField?.value ? "Update Gallery Item" : "Save Gallery Item");
+};
+
+const setGalleryUploadButtonLoading = (loading) => {
+  if (!galleryUploadButton) {
+    return;
+  }
+
+  galleryUploadButton.disabled = loading;
+  galleryUploadButton.textContent = loading ? "Uploading..." : "Upload";
 };
 
 const getGalleryFormPayload = () => ({
@@ -1417,6 +1459,7 @@ const fillGalleryForm = (gallery = {}) => {
   galleryAltField.value = gallery.alt_text || "";
   gallerySortField.value = gallery.sort_order ?? 0;
   galleryStatusField.value = gallery.status || "active";
+  updateGalleryPreview(gallery.image || "");
 
   if (gallerySaveButton) {
     gallerySaveButton.textContent = gallery.id ? "Update Gallery Item" : "Save Gallery Item";
@@ -1434,10 +1477,75 @@ const resetGalleryForm = () => {
   if (galleryStatusField) {
     galleryStatusField.value = "active";
   }
+  if (galleryUploadField) {
+    galleryUploadField.value = "";
+  }
+  updateGalleryPreview("");
   if (gallerySaveButton) {
     gallerySaveButton.textContent = "Save Gallery Item";
   }
   showGalleryFeedback("");
+};
+
+const uploadGalleryImage = async () => {
+  if (!restaurantSelect || !galleryUploadField || !galleryImageField) {
+    return;
+  }
+
+  const file = galleryUploadField.files?.[0];
+  if (!file) {
+    showGalleryFeedback("Please select an image to upload.", "error");
+    return;
+  }
+
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  if (file.type && !allowedTypes.includes(file.type)) {
+    showGalleryFeedback("Only JPG, PNG, and WebP images are allowed.", "error");
+    return;
+  }
+
+  if (file.size > 3 * 1024 * 1024) {
+    showGalleryFeedback("Image must be 3 MB or smaller.", "error");
+    return;
+  }
+
+  const selectedSlug = restaurantSelect.value || "demo-pizza-house";
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("purpose", "gallery");
+
+  setGalleryUploadButtonLoading(true);
+  showGalleryFeedback("Uploading image...");
+
+  try {
+    const response = await fetch(buildApiUrl("uploads.php", { restaurant: selectedSlug }), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "X-Admin-Dev-Token": adminDevToken
+      },
+      body: formData
+    });
+
+    let result = null;
+    try {
+      result = await response.json();
+    } catch {
+      result = null;
+    }
+
+    if (!response.ok || !result?.success || !result?.data?.path) {
+      throw new Error(result?.errors?.image || result?.message || `Upload failed with status ${response.status}.`);
+    }
+
+    galleryImageField.value = result.data.path;
+    updateGalleryPreview(result.data.path);
+    showGalleryFeedback(result.message || "Image uploaded successfully.");
+  } catch (error) {
+    showGalleryFeedback(error.message || "Could not upload image.", "error");
+  } finally {
+    setGalleryUploadButtonLoading(false);
+  }
 };
 
 const renderGallery = () => {
@@ -1940,6 +2048,11 @@ if (dealForm) {
 if (galleryForm) {
   galleryForm.addEventListener("submit", saveGallery);
 }
+
+galleryUploadButton?.addEventListener("click", uploadGalleryImage);
+galleryImageField?.addEventListener("input", () => {
+  updateGalleryPreview(galleryImageField.value);
+});
 
 categoryCreateResetButtons.forEach((button) => {
   button.addEventListener("click", () => {
