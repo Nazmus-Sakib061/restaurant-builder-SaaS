@@ -99,11 +99,11 @@ require_admin_write_access();
 $restaurant = restaurant_context();
 $restaurantId = (int) $restaurant['restaurant_id'];
 $restaurantSlug = (string) $restaurant['slug'];
-$purpose = strtolower(trim((string) ($_POST['purpose'] ?? 'gallery')));
+$purpose = strtolower(trim((string) ($_POST['purpose'] ?? $_POST['context'] ?? $_POST['type'] ?? 'gallery')));
 
-if ($purpose !== 'gallery') {
+if (!in_array($purpose, ['gallery', 'menu', 'deals'], true)) {
     upload_error('Validation error.', [
-        'purpose' => 'Invalid upload purpose.',
+        'purpose' => 'Invalid upload context.',
     ]);
 }
 

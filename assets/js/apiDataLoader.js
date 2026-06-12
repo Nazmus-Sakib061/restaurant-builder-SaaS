@@ -38,10 +38,19 @@
     const response = await fetch(`backend/api/site-data.php?restaurant=${encodeURIComponent(restaurantSlug)}`, {
       headers: { Accept: "application/json" }
     });
-    const result = await response.json();
 
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || "Restaurant API unavailable");
+    let result = null;
+    try {
+      result = await response.json();
+    } catch {
+      result = null;
+    }
+
+    if (!response.ok || !result?.success) {
+      const error = new Error(result?.message || "Restaurant API unavailable");
+      error.status = response.status;
+      error.details = result?.errors || null;
+      throw error;
     }
 
     return result.data || {};
@@ -147,8 +156,7 @@
     const restaurantSlug = params.get("restaurant");
     const demoKey = (params.get("demo") || DEFAULT_DEMO).toLowerCase();
     const mappedRestaurantSlug = DEMO_TO_RESTAURANT[demoKey] || DEMO_TO_RESTAURANT[DEFAULT_DEMO] || "demo-pizza-house";
-    const requestedRestaurantSlug = restaurantSlug || mappedRestaurantSlug;
-    const fallbackSlug = restaurantSlug || mappedRestaurantSlug;
+    const requestedRestaurantSlug = String(restaurantSlug || "").trim();
 
     if (requestedRestaurantSlug) {
       try {
@@ -156,13 +164,27 @@
         window.renderRestaurantWebsite?.(mapApiDataToRestaurantProfile(apiData));
         return;
       } catch (error) {
-        console.warn("Restaurant API failed, loading demo fallback.", error.message);
-        window.renderRestaurantWebsite?.(fallbackProfileForRestaurant(fallbackSlug));
+        const status = Number(error?.status || 0);
+        const notFound = status === 404 || /not found/i.test(String(error?.message || ""));
+
+        window.renderRestaurantError?.({
+          restaurantSlug: requestedRestaurantSlug,
+          title: notFound ? "Restaurant not found" : "Restaurant unavailable",
+          message: notFound
+            ? "The restaurant you requested does not exist or is not active. Please check the URL and try again."
+            : "We could not load this restaurant right now. Please try again later."
+        });
         return;
       }
     }
 
-    window.renderRestaurantWebsite?.(demoProfile(demoKey));
+    try {
+      const apiData = await fetchRestaurantProfile(mappedRestaurantSlug);
+      window.renderRestaurantWebsite?.(mapApiDataToRestaurantProfile(apiData));
+    } catch (error) {
+      console.warn("Restaurant API failed, loading demo fallback.", error.message);
+      window.renderRestaurantWebsite?.(fallbackProfileForRestaurant(mappedRestaurantSlug));
+    }
   }
 
   window.mapApiDataToRestaurantProfile = mapApiDataToRestaurantProfile;

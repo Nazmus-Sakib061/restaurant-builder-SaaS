@@ -286,6 +286,8 @@ function menu_item_validate(PDO $pdo, int $restaurantId, array $input, ?int $ign
         $errors['image'] = 'Image path is required.';
     } elseif (strlen($input['image']) > 255) {
         $errors['image'] = 'Image path must be 255 characters or fewer.';
+    } elseif (!menu_item_image_path_is_valid($input['image'])) {
+        $errors['image'] = 'Image must be a valid image path or URL.';
     }
 
     if (strlen($input['badge_text']) > 100) {
@@ -315,6 +317,62 @@ function menu_item_validate(PDO $pdo, int $restaurantId, array $input, ?int $ign
     return $errors;
 }
 
+function menu_item_image_path_is_valid(string $image): bool
+{
+    $value = trim($image);
+    if ($value === '' || strlen($value) > 255) {
+        return false;
+    }
+
+    if (str_contains($value, "\0") || str_contains($value, '\\')) {
+        return false;
+    }
+
+    if (preg_match('/(^|[\\\\\\/])\\.\\.([\\\\\\/]|$)/', $value)) {
+        return false;
+    }
+
+    if (preg_match('/^(?:javascript|data|vbscript|file):/i', $value)) {
+        return false;
+    }
+
+    $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+
+    if (preg_match('/^[a-z][a-z0-9+.-]*:/i', $value)) {
+        $parts = parse_url($value);
+        if (!is_array($parts)) {
+            return false;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            return false;
+        }
+
+        $path = (string) ($parts['path'] ?? '');
+        if ($path === '') {
+            return false;
+        }
+    } else {
+        if (str_starts_with($value, '/')) {
+            return false;
+        }
+
+        $path = preg_split('/[?#]/', $value, 2)[0] ?? $value;
+        if ($path === '') {
+            return false;
+        }
+
+        if (!preg_match('#^(?:images/|uploads/restaurants/)#i', $path)) {
+            return false;
+        }
+    }
+
+    $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+
+    return $extension !== '' && in_array($extension, $allowedExtensions, true);
+}
+
 function menu_item_resolved_slug(PDO $pdo, int $restaurantId, array $input, ?int $ignoreId = null): string
 {
     $base = $input['slug'] !== '' ? $input['slug'] : $input['name'];
@@ -341,6 +399,10 @@ if ($method === 'GET') {
                     'include_inactive' => $includeInactiveError,
                 ],
             ], 422);
+        }
+
+        if ($includeInactive === 1) {
+            require_admin_write_access();
         }
     }
 

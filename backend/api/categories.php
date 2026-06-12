@@ -133,6 +133,10 @@ if ($method === 'GET') {
                 ],
             ], 422);
         }
+
+        if ($includeInactive === 1) {
+            require_admin_write_access();
+        }
     }
 
     if (array_key_exists('id', $_GET) && $id === null) {

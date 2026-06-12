@@ -467,6 +467,42 @@
     return galleryItems;
   };
 
+  const renderRestaurantError = (details = {}) => {
+    const main = document.querySelector("main");
+    if (!main) {
+      return;
+    }
+
+    const title = details.title || "Restaurant not found";
+    const message = details.message || "We could not load this restaurant right now.";
+    const requestedSlug = String(details.restaurantSlug || "").trim();
+
+    main.innerHTML = `
+      <section class="section restaurant-error" aria-labelledby="restaurantErrorTitle">
+        <div class="container restaurant-error__wrap">
+          <article class="restaurant-error__card reveal is-visible">
+            <span class="section-head__eyebrow">Restaurant Unavailable</span>
+            <h1 id="restaurantErrorTitle">${escapeHTML(title)}</h1>
+            <p>${escapeHTML(message)}</p>
+            ${requestedSlug ? `<small class="restaurant-error__meta">Requested slug: ${escapeHTML(requestedSlug)}</small>` : ""}
+            <div class="restaurant-error__actions">
+              <a class="btn btn--primary" href="./">Back to Home</a>
+              <a class="btn btn--ghost" href="./?demo=pizza">Open Demo</a>
+            </div>
+          </article>
+        </div>
+      </section>
+    `;
+
+    document.body.dataset.restaurant = "error";
+    document.title = `${title} | Pizza House`;
+
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute("content", message);
+    }
+  };
+
   const renderAbout = (menuItems) => {
     const about = profile.about || {};
     const itemImages = menuItems.map((item) => item.image).filter(Boolean);
@@ -534,4 +570,5 @@
     render();
     window.refreshRestaurantInteractions?.();
   };
+  window.renderRestaurantError = renderRestaurantError;
 })();

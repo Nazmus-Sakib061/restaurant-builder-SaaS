@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Pizza House admin dashboard demo for future CRUD management.">
   <title>Pizza House Admin | Dashboard</title>
-  <link rel="stylesheet" href="assets/css/admin.css?v=image-upload-gallery-2">
+  <link rel="stylesheet" href="assets/css/admin.css?v=image-upload-gallery-3">
 </head>
 <body class="admin-page">
   <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
@@ -264,6 +264,24 @@
                   <input id="menuItemImageField" class="field-control" name="image" type="text" placeholder="images/Pizza/pizza 2.png">
                 </div>
                 <div class="form-group">
+                  <label for="menuItemUploadField">Upload Image</label>
+                  <div class="upload-control">
+                    <input
+                      id="menuItemUploadField"
+                      class="field-control"
+                      name="menu_item_upload"
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                    <button type="button" class="btn btn--ghost btn--compact" id="menuItemUploadButton">
+                      Upload
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group gallery-preview" id="menuItemPreview" hidden>
+                  <span class="gallery-preview__label">Image Preview</span>
+                  <img id="menuItemPreviewImage" src="" alt="Selected menu item image preview">
+                </div>
+                <div class="form-group">
                   <label for="menuItemBadgeField">Badge Text</label>
                   <input id="menuItemBadgeField" class="field-control" name="badge_text" type="text" maxlength="100">
                 </div>
@@ -355,8 +373,27 @@
                   <input id="dealPriceField" class="field-control" name="deal_price" type="number" step="0.01" min="0">
                 </div>
                 <div class="form-group">
-                  <label for="dealImageField">Image Path</label>
+                  <label for="dealImageField">Image Path / URL</label>
                   <input id="dealImageField" class="field-control" name="image" type="text" placeholder="images/Pizza/pizza 5.jpg">
+                </div>
+                <div class="form-group">
+                  <label for="dealUploadField">Upload Image</label>
+                  <div class="upload-control">
+                    <input
+                      id="dealUploadField"
+                      class="field-control"
+                      name="deal_upload"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp">
+                    <button type="button" class="btn btn--ghost btn--compact" id="dealUploadButton">
+                      Upload
+                    </button>
+                  </div>
+                  <small class="settings-note">JPG, PNG, or WebP. Maximum 3 MB.</small>
+                </div>
+                <div class="form-group gallery-preview" id="dealPreview" hidden>
+                  <span class="gallery-preview__label">Image Preview</span>
+                  <img id="dealPreviewImage" src="" alt="Selected deal image preview">
                 </div>
                 <div class="form-group">
                   <label for="dealSortField">Sort Order</label>
@@ -658,6 +695,6 @@
     </div>
   </div>
 
-  <script src="assets/js/admin.js?v=image-upload-gallery-2"></script>
+  <script src="assets/js/admin.js?v=deals-upload-1"></script>
 </body>
 </html>

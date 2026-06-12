@@ -48,6 +48,10 @@ const menuItemDescriptionField = document.getElementById("menuItemDescriptionFie
 const menuItemPriceField = document.getElementById("menuItemPriceField");
 const menuItemDiscountField = document.getElementById("menuItemDiscountField");
 const menuItemImageField = document.getElementById("menuItemImageField");
+const menuItemUploadField = document.getElementById("menuItemUploadField");
+const menuItemUploadButton = document.getElementById("menuItemUploadButton");
+const menuItemPreview = document.getElementById("menuItemPreview");
+const menuItemPreviewImage = document.getElementById("menuItemPreviewImage");
 const menuItemBadgeField = document.getElementById("menuItemBadgeField");
 const menuItemFeaturedField = document.getElementById("menuItemFeaturedField");
 const menuItemAvailableField = document.getElementById("menuItemAvailableField");
@@ -65,6 +69,10 @@ const dealBadgeField = document.getElementById("dealBadgeField");
 const dealRegularPriceField = document.getElementById("dealRegularPriceField");
 const dealPriceField = document.getElementById("dealPriceField");
 const dealImageField = document.getElementById("dealImageField");
+const dealUploadField = document.getElementById("dealUploadField");
+const dealUploadButton = document.getElementById("dealUploadButton");
+const dealPreview = document.getElementById("dealPreview");
+const dealPreviewImage = document.getElementById("dealPreviewImage");
 const dealStartsAtField = document.getElementById("dealStartsAtField");
 const dealEndsAtField = document.getElementById("dealEndsAtField");
 const dealSortField = document.getElementById("dealSortField");
@@ -332,6 +340,52 @@ const isHexColor = (value) => /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String
 const isUrlLike = (value) => {
   const normalized = String(value || "").trim();
   return normalized === "" || normalized.startsWith("#") || /^https?:\/\/\S+$/i.test(normalized);
+};
+
+const isValidImagePathOrUrl = (value) => {
+  const normalized = String(value ?? "").trim();
+  if (normalized === "" || normalized.length > 255) {
+    return false;
+  }
+
+  if (normalized.includes("\\") || normalized.includes("\0")) {
+    return false;
+  }
+
+  if (/(^|[\\/])\.\.([\\/]|$)/.test(normalized)) {
+    return false;
+  }
+
+  const allowedExtensions = ["jpg", "jpeg", "png", "webp"];
+  let pathPart = normalized;
+
+  if (/^[a-z][a-z0-9+.-]*:/i.test(normalized)) {
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(normalized);
+    } catch {
+      return false;
+    }
+
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+      return false;
+    }
+
+    pathPart = parsedUrl.pathname || "";
+  } else {
+    if (normalized.startsWith("/")) {
+      return false;
+    }
+
+    pathPart = normalized.split(/[?#]/)[0];
+
+    if (!/^(?:images\/|uploads\/restaurants\/)/i.test(pathPart)) {
+      return false;
+    }
+  }
+
+  const extension = String(pathPart.split(/[?#]/)[0].split(".").pop() || "").toLowerCase();
+  return allowedExtensions.includes(extension);
 };
 
 const renderOrders = () => {
@@ -968,6 +1022,8 @@ const validateMenuItemFormPayload = (payload) => {
     errors.image = "Image path must be 255 characters or fewer.";
   } else if (!payload.image) {
     errors.image = "Image path is required.";
+  } else if (!isValidImagePathOrUrl(payload.image)) {
+    errors.image = "Image must be a valid image path or URL.";
   }
 
   if (payload.badge_text.length > 100) {
@@ -1003,6 +1059,7 @@ const fillMenuItemForm = (menuItem = {}) => {
   menuItemPriceField.value = menuItem.price ?? "";
   menuItemDiscountField.value = menuItem.discount_price ?? "";
   menuItemImageField.value = menuItem.image || "";
+  updateMenuItemPreview(menuItem.image || "");
   menuItemBadgeField.value = menuItem.badge_text || "";
   menuItemFeaturedField.checked = Number(menuItem.is_featured || 0) === 1;
   menuItemAvailableField.checked = menuItem.is_available === undefined ? true : Number(menuItem.is_available) === 1;
@@ -1028,6 +1085,10 @@ const resetMenuItemForm = () => {
   if (menuItemFeaturedField) {
     menuItemFeaturedField.checked = false;
   }
+  if (menuItemUploadField) {
+    menuItemUploadField.value = "";
+  }
+  updateMenuItemPreview("");
   if (menuItemSortField) {
     menuItemSortField.value = 0;
   }
@@ -1133,6 +1194,8 @@ const validateDealFormPayload = (payload) => {
     errors.image = "Image path is required.";
   } else if (payload.image.length > 255) {
     errors.image = "Image path must be 255 characters or fewer.";
+  } else if (!isValidImagePathOrUrl(payload.image)) {
+    errors.image = "Image must be a valid image path or URL.";
   }
 
   if (!isNonNegativeInteger(payload.sort_order)) {
@@ -1158,6 +1221,7 @@ const fillDealForm = (deal = {}) => {
   dealRegularPriceField.value = deal.regular_price ?? "";
   dealPriceField.value = deal.deal_price ?? "";
   dealImageField.value = deal.image || "";
+  updateDealPreview(deal.image || "");
   dealStartsAtField.value = normalizeDateTimeLocalValue(deal.starts_at || "");
   dealEndsAtField.value = normalizeDateTimeLocalValue(deal.ends_at || "");
   dealSortField.value = deal.sort_order ?? 0;
@@ -1173,6 +1237,10 @@ const resetDealForm = () => {
   if (dealForm) {
     dealForm.reset();
   }
+  if (dealUploadField) {
+    dealUploadField.value = "";
+  }
+  updateDealPreview("");
   if (dealSortField) {
     dealSortField.value = 0;
   }
@@ -1234,7 +1302,10 @@ const loadDealsForRestaurant = async (slug) => {
   const resolvedSlug = slug || "demo-pizza-house";
   try {
     const result = await fetchJson("deals.php", {
-      params: { restaurant: resolvedSlug, include_inactive: 1 }
+      params: { restaurant: resolvedSlug, include_inactive: 1 },
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
     });
 
     currentDeals = Array.isArray(result.data) ? result.data : [];
@@ -1358,45 +1429,133 @@ const adminAssetUrl = (path) => {
     return "";
   }
 
-  if (/^(?:https?:|data:|blob:|\/)/i.test(value)) {
+  if (/^(?:https?:|data:|blob:)/i.test(value)) {
     return value;
+  }
+
+  if (value.startsWith("/")) {
+    return "";
   }
 
   return `../${value.replace(/^(?:\.\/)+/, "")}`;
 };
 
-const updateGalleryPreview = (path) => {
-  if (!galleryPreview || !galleryPreviewImage) {
+const updateImagePreview = (path, previewElement, previewImageElement) => {
+  if (!previewElement || !previewImageElement) {
     return;
   }
 
   const previewUrl = adminAssetUrl(path);
   if (!previewUrl) {
-    galleryPreview.hidden = true;
-    galleryPreviewImage.removeAttribute("src");
+    previewElement.hidden = true;
+    previewImageElement.removeAttribute("src");
     return;
   }
 
-  galleryPreview.hidden = false;
-  galleryPreviewImage.src = previewUrl;
+  previewElement.hidden = false;
+  previewImageElement.src = previewUrl;
 };
 
-const setGalleryButtonLoading = (loading) => {
-  if (!gallerySaveButton) {
+const updateGalleryPreview = (path) => {
+  updateImagePreview(path, galleryPreview, galleryPreviewImage);
+};
+
+const updateMenuItemPreview = (path) => {
+  updateImagePreview(path, menuItemPreview, menuItemPreviewImage);
+};
+
+const updateDealPreview = (path) => {
+  updateImagePreview(path, dealPreview, dealPreviewImage);
+};
+
+const setUploadButtonLoading = (button, loading) => {
+  if (!button) {
     return;
   }
 
-  gallerySaveButton.disabled = loading;
-  gallerySaveButton.textContent = loading ? "Saving..." : (galleryIdField?.value ? "Update Gallery Item" : "Save Gallery Item");
+  button.disabled = loading;
+  button.textContent = loading ? "Uploading..." : "Upload";
 };
 
 const setGalleryUploadButtonLoading = (loading) => {
-  if (!galleryUploadButton) {
+  setUploadButtonLoading(galleryUploadButton, loading);
+};
+
+const setMenuItemUploadButtonLoading = (loading) => {
+  setUploadButtonLoading(menuItemUploadButton, loading);
+};
+
+const setDealUploadButtonLoading = (loading) => {
+  setUploadButtonLoading(dealUploadButton, loading);
+};
+
+const uploadRestaurantImage = async ({
+  fileInput,
+  imageInput,
+  previewUpdater,
+  setLoading,
+  showFeedback,
+  purpose,
+  maxBytes = 3 * 1024 * 1024
+}) => {
+  if (!restaurantSelect || !fileInput || !imageInput) {
     return;
   }
 
-  galleryUploadButton.disabled = loading;
-  galleryUploadButton.textContent = loading ? "Uploading..." : "Upload";
+  const file = fileInput.files?.[0];
+  if (!file) {
+    showFeedback("Please select an image to upload.", "error");
+    return;
+  }
+
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  if (file.type && !allowedTypes.includes(file.type)) {
+    showFeedback("Only JPG, PNG, and WebP images are allowed.", "error");
+    return;
+  }
+
+  if (file.size > maxBytes) {
+    showFeedback("Image must be 3 MB or smaller.", "error");
+    return;
+  }
+
+  const selectedSlug = restaurantSelect.value || "demo-pizza-house";
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("purpose", purpose);
+
+  setLoading(true);
+  showFeedback("Uploading image...");
+
+  try {
+    const response = await fetch(buildApiUrl("uploads.php", { restaurant: selectedSlug }), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "X-Admin-Dev-Token": adminDevToken
+      },
+      body: formData
+    });
+
+    let result = null;
+    try {
+      result = await response.json();
+    } catch {
+      result = null;
+    }
+
+    if (!response.ok || !result?.success || !result?.data?.path) {
+      throw new Error(result?.errors?.image || result?.errors?.purpose || result?.message || `Upload failed with status ${response.status}.`);
+    }
+
+    imageInput.value = result.data.path;
+    previewUpdater(result.data.path);
+    showFeedback(result.message || "Image uploaded successfully.");
+  } catch (error) {
+    showFeedback(error.message || "Could not upload image.", "error");
+  } finally {
+    setLoading(false);
+  }
 };
 
 const getGalleryFormPayload = () => ({
@@ -1426,6 +1585,8 @@ const validateGalleryFormPayload = (payload) => {
     errors.image = "Gallery image is required.";
   } else if (payload.image.length > 255) {
     errors.image = "Image path must be 255 characters or fewer.";
+  } else if (!isValidImagePathOrUrl(payload.image)) {
+    errors.image = "Image must be a valid image path or URL.";
   }
 
   if (payload.alt_text.length > 255) {
@@ -1484,66 +1645,32 @@ const resetGalleryForm = () => {
   showGalleryFeedback("");
 };
 
-const uploadGalleryImage = async () => {
-  if (!restaurantSelect || !galleryUploadField || !galleryImageField) {
-    return;
-  }
+const uploadGalleryImage = async () => uploadRestaurantImage({
+  fileInput: galleryUploadField,
+  imageInput: galleryImageField,
+  previewUpdater: updateGalleryPreview,
+  setLoading: setGalleryUploadButtonLoading,
+  showFeedback: showGalleryFeedback,
+  purpose: "gallery"
+});
 
-  const file = galleryUploadField.files?.[0];
-  if (!file) {
-    showGalleryFeedback("Please select an image to upload.", "error");
-    return;
-  }
+const uploadMenuItemImage = async () => uploadRestaurantImage({
+  fileInput: menuItemUploadField,
+  imageInput: menuItemImageField,
+  previewUpdater: updateMenuItemPreview,
+  setLoading: setMenuItemUploadButtonLoading,
+  showFeedback: showMenuItemFeedback,
+  purpose: "menu"
+});
 
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-  if (file.type && !allowedTypes.includes(file.type)) {
-    showGalleryFeedback("Only JPG, PNG, and WebP images are allowed.", "error");
-    return;
-  }
-
-  if (file.size > 3 * 1024 * 1024) {
-    showGalleryFeedback("Image must be 3 MB or smaller.", "error");
-    return;
-  }
-
-  const selectedSlug = restaurantSelect.value || "demo-pizza-house";
-  const formData = new FormData();
-  formData.append("image", file);
-  formData.append("purpose", "gallery");
-
-  setGalleryUploadButtonLoading(true);
-  showGalleryFeedback("Uploading image...");
-
-  try {
-    const response = await fetch(buildApiUrl("uploads.php", { restaurant: selectedSlug }), {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "X-Admin-Dev-Token": adminDevToken
-      },
-      body: formData
-    });
-
-    let result = null;
-    try {
-      result = await response.json();
-    } catch {
-      result = null;
-    }
-
-    if (!response.ok || !result?.success || !result?.data?.path) {
-      throw new Error(result?.errors?.image || result?.message || `Upload failed with status ${response.status}.`);
-    }
-
-    galleryImageField.value = result.data.path;
-    updateGalleryPreview(result.data.path);
-    showGalleryFeedback(result.message || "Image uploaded successfully.");
-  } catch (error) {
-    showGalleryFeedback(error.message || "Could not upload image.", "error");
-  } finally {
-    setGalleryUploadButtonLoading(false);
-  }
-};
+const uploadDealImage = async () => uploadRestaurantImage({
+  fileInput: dealUploadField,
+  imageInput: dealImageField,
+  previewUpdater: updateDealPreview,
+  setLoading: setDealUploadButtonLoading,
+  showFeedback: showDealFeedback,
+  purpose: "deals"
+});
 
 const renderGallery = () => {
   if (!galleryTableBody) {
@@ -1583,7 +1710,10 @@ const loadGalleryForRestaurant = async (slug) => {
   const resolvedSlug = slug || "demo-pizza-house";
   try {
     const result = await fetchJson("gallery.php", {
-      params: { restaurant: resolvedSlug, include_inactive: 1 }
+      params: { restaurant: resolvedSlug, include_inactive: 1 },
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
     });
 
     currentGallery = Array.isArray(result.data) ? result.data : [];
@@ -1738,7 +1868,10 @@ const loadCategoriesForRestaurant = async (slug) => {
   const resolvedSlug = slug || "demo-pizza-house";
   try {
     const result = await fetchJson("categories.php", {
-      params: { restaurant: resolvedSlug, include_inactive: 1 }
+      params: { restaurant: resolvedSlug, include_inactive: 1 },
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
     });
 
     currentCategories = Array.isArray(result.data) ? result.data : [];
@@ -1760,7 +1893,10 @@ const loadMenuItemsForRestaurant = async (slug) => {
   const resolvedSlug = slug || "demo-pizza-house";
   try {
     const result = await fetchJson("menu-items.php", {
-      params: { restaurant: resolvedSlug, include_inactive: 1 }
+      params: { restaurant: resolvedSlug, include_inactive: 1 },
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
     });
 
     currentMenuItems = Array.isArray(result.data) ? result.data : [];
@@ -2049,6 +2185,14 @@ if (galleryForm) {
 galleryUploadButton?.addEventListener("click", uploadGalleryImage);
 galleryImageField?.addEventListener("input", () => {
   updateGalleryPreview(galleryImageField.value);
+});
+menuItemUploadButton?.addEventListener("click", uploadMenuItemImage);
+menuItemImageField?.addEventListener("input", () => {
+  updateMenuItemPreview(menuItemImageField.value);
+});
+dealUploadButton?.addEventListener("click", uploadDealImage);
+dealImageField?.addEventListener("input", () => {
+  updateDealPreview(dealImageField.value);
 });
 
 categoryCreateResetButtons.forEach((button) => {

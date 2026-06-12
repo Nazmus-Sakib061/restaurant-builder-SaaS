@@ -939,6 +939,70 @@ button {
   line-height: 1.65;
 }
 
+.restaurant-error {
+  min-height: calc(100vh - 12rem);
+  display: grid;
+  place-items: center;
+}
+
+.restaurant-error__wrap {
+  width: min(760px, 100%);
+}
+
+.restaurant-error__card {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(1.6rem, 4vw, 3rem);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(circle at top left, rgba(var(--primary-rgb), 0.18), transparent 36%),
+    radial-gradient(circle at bottom right, rgba(var(--accent-rgb), 0.12), transparent 30%),
+    rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-soft);
+}
+
+.restaurant-error__card h1 {
+  margin: 0.8rem 0 0;
+  font-family: "Bahnschrift", "Trebuchet MS", sans-serif;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 0.98;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.restaurant-error__card p {
+  max-width: 42rem;
+  margin: 1rem 0 0;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.restaurant-error__meta {
+  display: inline-block;
+  margin-top: 1rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.restaurant-error__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 1.6rem;
+}
+
+body[data-restaurant="error"] .page-bg,
+body[data-restaurant="error"] .navbar,
+body[data-restaurant="error"] .footer,
+body[data-restaurant="error"] .back-to-top,
+body[data-restaurant="error"] .toast {
+  display: none !important;
+}
+
+body[data-restaurant="error"] main {
+  min-height: 100vh;
+}
+
 .about__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
