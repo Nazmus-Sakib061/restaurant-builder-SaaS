@@ -94,6 +94,18 @@
     });
   };
 
+  const setOptionalContent = (selector, value, wrapperSelector) => {
+    const resolvedValue = String(value || "").trim();
+
+    document.querySelectorAll(selector).forEach((node) => {
+      node.textContent = resolvedValue;
+      const wrapper = wrapperSelector ? node.closest(wrapperSelector) : node;
+      if (wrapper) {
+        wrapper.hidden = !resolvedValue;
+      }
+    });
+  };
+
   const setImage = (img, path, alt) => {
     if (!img) {
       return;
@@ -367,12 +379,14 @@
   };
 
   const renderMenu = () => {
+    const menuSection = document.getElementById("menu");
     const filterBar = document.getElementById("menuFilters");
     const menuGrid = document.querySelector("[data-menu-grid]") || document.getElementById("menuGrid");
     const menuItems = (profile.menuItems || []).filter((item) => String(item.status || "active") === "active");
     const categories = Array.from(new Set((profile.menuCategories || []).filter(Boolean)));
 
     if (filterBar) {
+      filterBar.hidden = menuItems.length === 0;
       filterBar.innerHTML = `
         <button class="filter-btn is-active" type="button" data-filter="all">All</button>
         ${categories.map((category) => {
@@ -385,6 +399,14 @@
     if (menuGrid) {
       menuGrid.innerHTML = menuItems.map((item) => createMenuCard(item)).join("");
     }
+
+    if (menuSection) {
+      menuSection.hidden = menuItems.length === 0;
+    }
+
+    document.querySelectorAll('a[href="#menu"]').forEach((link) => {
+      link.hidden = menuItems.length === 0;
+    });
 
     const select = document.querySelector("[data-order-select]") || document.getElementById("foodItem");
     if (select) {
@@ -427,12 +449,21 @@
   };
 
   const renderDeals = () => {
+    const dealsSection = document.getElementById("deals");
     const dealGrid = document.querySelector("[data-deal-grid]") || document.getElementById("dealGrid");
     const deals = (profile.deals || []).filter((deal) => String(deal.status || "active") === "active");
 
     if (dealGrid) {
       dealGrid.innerHTML = deals.map((deal) => createDealCard(deal)).join("");
     }
+
+    if (dealsSection) {
+      dealsSection.hidden = deals.length === 0;
+    }
+
+    document.querySelectorAll('a[href="#deals"]').forEach((link) => {
+      link.hidden = deals.length === 0;
+    });
   };
 
   const renderGallery = () => {
@@ -524,26 +555,47 @@
   const renderContact = () => {
     const contact = profile.contact || {};
     const social = profile.social || {};
-    const telHref = `tel:${String(contact.phone || "").replace(/[^\d+]/g, "")}`;
+    const phone = String(contact.phone || "").trim();
+    const email = String(contact.email || "").trim();
+    const address = String(contact.address || "").trim();
+    const openingHours = String(contact.openingHours || "").trim();
+    const telHref = phone ? `tel:${phone.replace(/[^\d+]/g, "")}` : "";
 
-    setHrefAll("[data-contact-phone]", telHref, contact.phone || "");
-    setTextAll("[data-contact-address]", contact.address || "");
-    setTextAll("[data-contact-hours]", contact.openingHours || "");
+    setOptionalHrefAll("[data-contact-phone]", telHref, phone);
+    setOptionalContent("[data-contact-phone]", phone, ".contact-card");
+    setOptionalContent("[data-contact-address]", address, ".contact-card");
+    setOptionalContent("[data-contact-hours]", openingHours, ".contact-card");
 
-    setHrefAll("[data-footer-phone]", telHref, contact.phone || "");
-    setHrefAll("[data-footer-email]", `mailto:${contact.email || ""}`, contact.email || "");
-    setTextAll("[data-footer-address]", contact.address || "");
+    setOptionalHrefAll("[data-footer-phone]", telHref, phone);
+    setOptionalHrefAll("[data-footer-email]", email ? `mailto:${email}` : "", email);
+    setOptionalContent("[data-footer-phone]", phone);
+    setOptionalContent("[data-footer-email]", email);
+    setOptionalContent("[data-footer-address]", address);
 
     document.querySelectorAll("[data-social-link]").forEach((link) => {
       const key = link.dataset.socialLink;
-      const href = social[key] || "#";
-      link.setAttribute("href", href);
-      if (href === "#") {
+      const href = String(social[key] || "").trim();
+      const hasLink = href && href !== "#";
+      link.hidden = !hasLink;
+
+      if (!hasLink) {
+        link.removeAttribute("href");
         link.removeAttribute("target");
         link.removeAttribute("rel");
       } else {
+        link.setAttribute("href", href);
         link.setAttribute("target", "_blank");
         link.setAttribute("rel", "noopener noreferrer");
+      }
+    });
+
+    document.querySelectorAll(".footer__links").forEach((group) => {
+      if (group.querySelector("[data-social-link]")) {
+        group.hidden = !group.querySelector("[data-social-link]:not([hidden])");
+      }
+
+      if (group.querySelector("[data-footer-phone]")) {
+        group.hidden = !group.querySelector("[data-footer-phone]:not([hidden]), [data-footer-email]:not([hidden]), [data-footer-address]:not([hidden])");
       }
     });
   };

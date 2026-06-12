@@ -4,6 +4,7 @@ const navMenu = document.getElementById("siteNav");
 const yearNode = document.getElementById("year");
 const backToTop = document.getElementById("backToTop");
 const toast = document.getElementById("toast");
+const skipLink = document.querySelector(".skip-link");
 const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
 const menuCards = Array.from(document.querySelectorAll(".food-card"));
 const orderButtons = Array.from(document.querySelectorAll(".order-trigger"));
@@ -12,7 +13,7 @@ const nameField = document.getElementById("customerName");
 const phoneField = document.getElementById("customerPhone");
 const foodField = document.getElementById("foodItem");
 const messageField = document.getElementById("orderMessage");
-const allAnchors = Array.from(document.querySelectorAll('a[href^="#"]'));
+const allAnchors = Array.from(document.querySelectorAll('a[href^="#"]:not(.skip-link)'));
 const revealItems = Array.from(document.querySelectorAll(".reveal"));
 const navLinks = Array.from(document.querySelectorAll(".navbar__link"));
 
@@ -29,6 +30,7 @@ const setNavOpen = (open) => {
 
   navMenu.classList.toggle("is-open", open);
   navToggle.setAttribute("aria-expanded", String(open));
+  navToggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
 };
 
 const showToast = (message, state = "success") => {
@@ -54,9 +56,22 @@ const scrollToTarget = (selector) => {
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
+skipLink?.addEventListener("click", (event) => {
+  const mainContent = document.getElementById("mainContent");
+  if (!mainContent) {
+    return;
+  }
+
+  event.preventDefault();
+  mainContent.focus({ preventScroll: true });
+  scrollToTarget("#mainContent");
+});
+
 const updateActiveFilter = (activeFilter) => {
   document.querySelectorAll("[data-filter]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.filter === activeFilter);
+    const isActive = button.dataset.filter === activeFilter;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
   });
 
   document.querySelectorAll(".food-card").forEach((card) => {
@@ -144,6 +159,13 @@ document.addEventListener("click", (event) => {
 
   if (!clickInsideNav && !clickOnToggle) {
     setNavOpen(false);
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && navMenu?.classList.contains("is-open")) {
+    setNavOpen(false);
+    navToggle?.focus();
   }
 });
 

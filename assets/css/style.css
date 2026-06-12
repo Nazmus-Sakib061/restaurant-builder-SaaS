@@ -23,7 +23,7 @@
   --radius-xl: 34px;
   --radius-lg: 26px;
   --radius-md: 18px;
-  --container: min(1180px, calc(100% - 2rem));
+  --container: min(1220px, calc(100% - 2.5rem));
   --transition: 220ms ease;
   --hero-food-width: min(820px, 100%);
   --hero-food-width-mobile: min(480px, 100%);
@@ -42,7 +42,7 @@ html {
 
 body {
   margin: 0;
-  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-family: "Aptos", "Segoe UI", sans-serif;
   color: var(--text);
   background:
     radial-gradient(circle at 15% 12%, rgba(var(--primary-rgb), 0.18), transparent 22%),
@@ -53,6 +53,36 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  color: #fff;
+  background: var(--accent);
+  transform: translateY(-150%);
+  transition: transform var(--transition);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(var(--accent-rgb), 0.9);
+  outline-offset: 4px;
 }
 
 body::before,
@@ -108,7 +138,8 @@ button {
 }
 
 .section {
-  padding: 6rem 0;
+  position: relative;
+  padding: clamp(4.75rem, 7vw, 7rem) 0;
   scroll-margin-top: 100px;
 }
 
@@ -170,14 +201,14 @@ button {
   position: sticky;
   top: 0;
   z-index: 50;
-  padding: 1rem 0;
+  padding: 0.9rem 0;
   transition: background var(--transition), border-color var(--transition), box-shadow var(--transition), backdrop-filter var(--transition);
 }
 
 .navbar.is-scrolled {
-  background: rgba(5, 5, 5, 0.88);
+  background: rgba(5, 5, 5, 0.82);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(24px) saturate(130%);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
 }
 
@@ -186,6 +217,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  min-height: 3.6rem;
 }
 
 .brand {
@@ -246,7 +278,7 @@ button {
 .navbar__nav {
   display: flex;
   align-items: center;
-  gap: 1.6rem;
+  gap: clamp(0.9rem, 2vw, 1.65rem);
 }
 
 .navbar__link {
@@ -254,6 +286,7 @@ button {
   color: rgba(255, 255, 255, 0.82);
   font-weight: 600;
   transition: color var(--transition);
+  font-size: 0.94rem;
 }
 
 .navbar__link::after {
@@ -307,14 +340,15 @@ button {
 }
 
 .hero {
-  padding-top: 3rem;
+  padding-top: clamp(2.5rem, 5vw, 4.5rem);
+  overflow: clip;
 }
 
 .hero__grid {
   display: grid;
-  grid-template-columns: 1.02fr 0.98fr;
+  grid-template-columns: minmax(0, 0.95fr) minmax(500px, 1.05fr);
   align-items: center;
-  gap: 2rem;
+  gap: clamp(1.5rem, 4vw, 4rem);
   min-height: calc(100vh - 8rem);
 }
 
@@ -351,7 +385,7 @@ button {
 }
 
 .hero h1 {
-  font-size: clamp(3rem, 7vw, 6.5rem);
+  font-size: clamp(3.4rem, 6.5vw, 6.6rem);
   max-width: 10ch;
 }
 
@@ -373,7 +407,7 @@ button {
 
 .hero p {
   max-width: 58ch;
-  margin: 1.25rem 0 0;
+  margin: 1.4rem 0 0;
 }
 
 .hero__actions {
@@ -418,7 +452,7 @@ button {
 
 .hero__visual {
   position: relative;
-  min-height: 560px;
+  min-height: 590px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -526,9 +560,9 @@ button {
   min-width: 10rem;
   padding: 0.9rem 1rem;
   border-radius: 18px;
-  background: rgba(10, 10, 10, 0.72);
+  background: rgba(10, 10, 10, 0.68);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(22px) saturate(125%);
   box-shadow: var(--shadow-soft);
   z-index: 3;
 }
@@ -587,6 +621,17 @@ button {
   transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease, background 0.28s ease;
 }
 
+.feature-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), transparent 42%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition);
+}
+
 @media (hover: hover) {
   .hero-stat:hover,
   .feature-card:hover {
@@ -597,6 +642,10 @@ button {
       0 18px 45px rgba(0, 0, 0, 0.45),
       0 0 25px rgba(var(--primary-rgb), 0.22);
     z-index: 5;
+  }
+
+  .feature-card:hover::after {
+    opacity: 1;
   }
 }
 
@@ -628,8 +677,8 @@ button {
 }
 
 .section-head {
-  max-width: 50rem;
-  margin-bottom: 2rem;
+  max-width: 52rem;
+  margin-bottom: clamp(2rem, 4vw, 3rem);
 }
 
 .section-head h2,
@@ -669,7 +718,7 @@ button {
 .menu-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.25rem;
+  gap: 1.4rem;
 }
 
 .food-card {
@@ -680,6 +729,8 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: var(--shadow-soft);
   transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition), opacity var(--transition);
+  display: flex;
+  flex-direction: column;
 }
 
 .food-card:hover {
@@ -694,7 +745,7 @@ button {
 
 .food-card__media {
   position: relative;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 11;
   overflow: hidden;
   background: radial-gradient(circle at 50% 20%, rgba(var(--primary-rgb), 0.12), transparent 55%), #0a0a0a;
 }
@@ -727,6 +778,9 @@ button {
 
 .food-card__body {
   padding: 1.15rem 1.15rem 1.3rem;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 }
 
 .food-card__body h3,
@@ -745,14 +799,18 @@ button {
   line-height: 1.65;
 }
 
+.food-card__body p {
+  min-height: 3.3em;
+}
+
 .food-card__meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.8rem;
-  margin-top: 1rem;
   padding-top: 0.95rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: auto;
 }
 
 .food-card__price {
@@ -790,7 +848,7 @@ button {
 .deal-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.25rem;
+  gap: 1.4rem;
 }
 
 .deal-card {
@@ -799,6 +857,15 @@ button {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.deal-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(var(--primary-rgb), 0.3);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.52);
 }
 
 .deal-card__media {
@@ -837,13 +904,17 @@ button {
 
 .deal-card__body {
   padding: 1.2rem;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 }
 
 .deal-card__price {
   display: flex;
   align-items: baseline;
   gap: 0.8rem;
-  margin-top: 1rem;
+  margin-top: auto;
+  padding-top: 1rem;
 }
 
 .deal-card__price del {
@@ -883,7 +954,7 @@ button {
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.25rem;
+  gap: 1.4rem;
   margin-top: 1.6rem;
 }
 
@@ -904,7 +975,7 @@ button {
 
 .gallery-card__media {
   position: relative;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 5 / 4;
   overflow: hidden;
   background:
     radial-gradient(circle at 50% 20%, rgba(var(--primary-rgb), 0.16), transparent 55%),
@@ -1006,7 +1077,7 @@ body[data-restaurant="error"] main {
 .about__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  gap: clamp(2rem, 5vw, 5rem);
   align-items: center;
 }
 
@@ -1025,6 +1096,13 @@ body[data-restaurant="error"] main {
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: border-color var(--transition), background var(--transition), transform var(--transition);
+}
+
+.about-point:hover {
+  transform: translateX(4px);
+  border-color: rgba(var(--primary-rgb), 0.32);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .about-point span {
@@ -1093,7 +1171,7 @@ body[data-restaurant="error"] main {
 .contact__grid {
   display: grid;
   grid-template-columns: 0.92fr 1.08fr;
-  gap: 2rem;
+  gap: clamp(2rem, 5vw, 5rem);
   align-items: start;
 }
 
@@ -1111,6 +1189,13 @@ body[data-restaurant="error"] main {
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: border-color var(--transition), background var(--transition), transform var(--transition);
+}
+
+.contact-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(var(--primary-rgb), 0.3);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .contact-card__icon {
@@ -1141,7 +1226,7 @@ body[data-restaurant="error"] main {
 }
 
 .contact__form-wrap {
-  padding: 1.3rem;
+  padding: clamp(1.2rem, 3vw, 2rem);
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1211,7 +1296,7 @@ body[data-restaurant="error"] main {
 }
 
 .footer {
-  padding: 3rem 0 1.8rem;
+  padding: 4rem 0 1.8rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(5, 5, 5, 0.82);
   backdrop-filter: blur(10px);
@@ -1348,16 +1433,18 @@ body[data-restaurant="error"] main {
 }
 
 @media (max-width: 1100px) {
-  .hero__grid,
   .about__grid,
   .contact__grid {
     grid-template-columns: 1fr;
   }
 
+  .hero__grid {
+    grid-template-columns: minmax(0, 0.9fr) minmax(430px, 1.1fr);
+    gap: 1rem;
+  }
+
   .hero__visual {
-    order: -1;
-    min-height: 520px;
-    justify-content: center;
+    min-height: 500px;
   }
 
   .feature-grid,
@@ -1384,8 +1471,8 @@ body[data-restaurant="error"] main {
   .navbar__nav {
     position: absolute;
     top: calc(100% + 0.8rem);
-    left: 1rem;
-    right: 1rem;
+    left: max(1rem, calc((100% - var(--container)) / 2));
+    right: max(1rem, calc((100% - var(--container)) / 2));
     display: grid;
     gap: 0.25rem;
     padding: 0.85rem;
@@ -1418,6 +1505,15 @@ body[data-restaurant="error"] main {
     max-width: 12ch;
   }
 
+  .hero__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero__visual {
+    min-height: 430px;
+    justify-content: center;
+  }
+
   .hero__stats,
   .form-grid {
     grid-template-columns: 1fr;
@@ -1436,20 +1532,24 @@ body[data-restaurant="error"] main {
 }
 
 @media (max-width: 620px) {
+  :root {
+    --container: min(1220px, calc(100% - 1.5rem));
+  }
+
   .section {
     padding: 4.75rem 0;
   }
 
   .hero {
-    padding-top: 2rem;
+    padding-top: 1.5rem;
   }
 
   .hero__visual {
-    min-height: 380px;
+    min-height: 330px;
   }
 
   .hero-image {
-    min-height: 340px;
+    min-height: 310px;
   }
 
   .hero-glow {
@@ -1460,6 +1560,14 @@ body[data-restaurant="error"] main {
   .hero-food-img {
     width: var(--hero-food-width-mobile);
     transform: none;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.75rem, 14vw, 4.25rem);
+  }
+
+  .hero__actions .btn {
+    flex: 1 1 10rem;
   }
 
   .hero__floating {
@@ -1484,7 +1592,39 @@ body[data-restaurant="error"] main {
     align-items: flex-start;
   }
 
+  .filter-bar {
+    flex-wrap: nowrap;
+    margin-inline: -0.75rem;
+    padding: 0 0.75rem 0.4rem;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .filter-btn {
+    flex: 0 0 auto;
+  }
+
   .toast {
     bottom: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
   }
 }

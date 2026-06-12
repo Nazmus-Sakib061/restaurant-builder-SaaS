@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Pizza House - a premium single-page restaurant website with online menu, special deals, and fast ordering.">
   <title>Pizza House | Best Food in Your Town</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=gallery-public-2">
+  <link rel="stylesheet" href="assets/css/style.css?v=public-polish-3">
 </head>
 <body>
+  <a class="skip-link" href="#mainContent">Skip to content</a>
   <div class="page-bg" aria-hidden="true"></div>
 
   <header class="navbar" id="navbar">
@@ -47,7 +48,7 @@
     </div>
   </header>
 
-  <main>
+  <main id="mainContent" tabindex="-1">
     <section class="hero section" id="home">
       <div class="container hero__grid">
         <div class="hero__content reveal">
@@ -156,7 +157,7 @@
           <p>Filter by category, preview popular dishes, and tap any item to jump straight to the order form.</p>
         </div>
 
-        <div class="filter-bar reveal" id="menuFilters" role="tablist" aria-label="Menu filters">
+        <div class="filter-bar reveal" id="menuFilters" role="group" aria-label="Menu filters">
           <button class="filter-btn is-active" type="button" data-filter="all">All</button>
           <button class="filter-btn" type="button" data-filter="pizza">Pizza</button>
           <button class="filter-btn" type="button" data-filter="burger">Burger</button>
@@ -645,9 +646,9 @@
 
   <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
 
-  <script src="assets/js/restaurantData.js?v=gallery-public-2"></script>
-  <script src="assets/js/restaurantRenderer.js?v=gallery-public-2"></script>
-  <script src="assets/js/apiDataLoader.js?v=gallery-public-2"></script>
-  <script src="assets/js/main.js?v=gallery-public-2"></script>
+  <script src="assets/js/restaurantData.js?v=public-polish-3"></script>
+  <script src="assets/js/restaurantRenderer.js?v=public-polish-3"></script>
+  <script src="assets/js/apiDataLoader.js?v=public-polish-3"></script>
+  <script src="assets/js/main.js?v=public-polish-3"></script>
 </body>
 </html>
