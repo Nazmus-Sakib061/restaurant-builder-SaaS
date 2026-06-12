@@ -553,6 +553,23 @@
                     <div class="form-group">
                       <label for="logoPath">Logo Path</label>
                       <input id="logoPath" class="field-control" name="logo" type="text" placeholder="images/logo.png">
+                      <label for="logoUploadField">Upload Image</label>
+                      <div class="upload-control">
+                        <input
+                          id="logoUploadField"
+                          class="field-control"
+                          name="logo_upload"
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                        <button type="button" class="btn btn--ghost btn--compact" id="logoUploadButton">
+                          Upload
+                        </button>
+                      </div>
+                      <small class="settings-note">JPG, PNG, or WebP. Maximum 3 MB.</small>
+                      <div class="form-group gallery-preview" id="logoPreview" hidden>
+                        <span class="gallery-preview__label">Image Preview</span>
+                        <img id="logoPreviewImage" src="" alt="Selected logo image preview">
+                      </div>
                     </div>
                     <div class="form-group">
                       <label for="faviconPath">Favicon Path</label>
@@ -583,6 +600,23 @@
                     <div class="form-group">
                       <label for="heroImagePath">Hero Image Path</label>
                       <input id="heroImagePath" class="field-control" name="hero_image" type="text" placeholder="images/hero image.png">
+                      <label for="heroUploadField">Upload Image</label>
+                      <div class="upload-control">
+                        <input
+                          id="heroUploadField"
+                          class="field-control"
+                          name="hero_upload"
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                        <button type="button" class="btn btn--ghost btn--compact" id="heroUploadButton">
+                          Upload
+                        </button>
+                      </div>
+                      <small class="settings-note">JPG, PNG, or WebP. Maximum 3 MB.</small>
+                      <div class="form-group gallery-preview" id="heroPreview" hidden>
+                        <span class="gallery-preview__label">Image Preview</span>
+                        <img id="heroPreviewImage" src="" alt="Selected hero image preview">
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -601,6 +635,23 @@
                     <div class="form-group">
                       <label for="aboutImagePath">About Image Path</label>
                       <input id="aboutImagePath" class="field-control" name="about_image" type="text" placeholder="images/hero image.png">
+                      <label for="aboutUploadField">Upload Image</label>
+                      <div class="upload-control">
+                        <input
+                          id="aboutUploadField"
+                          class="field-control"
+                          name="about_upload"
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                        <button type="button" class="btn btn--ghost btn--compact" id="aboutUploadButton">
+                          Upload
+                        </button>
+                      </div>
+                      <small class="settings-note">JPG, PNG, or WebP. Maximum 3 MB.</small>
+                      <div class="form-group gallery-preview" id="aboutPreview" hidden>
+                        <span class="gallery-preview__label">Image Preview</span>
+                        <img id="aboutPreviewImage" src="" alt="Selected about image preview">
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -695,6 +746,6 @@
     </div>
   </div>
 
-  <script src="assets/js/admin.js?v=deals-upload-1"></script>
+  <script src="assets/js/admin.js?v=settings-upload-1"></script>
 </body>
 </html>

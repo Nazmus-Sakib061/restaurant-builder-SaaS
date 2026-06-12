@@ -100,10 +100,17 @@ $restaurant = restaurant_context();
 $restaurantId = (int) $restaurant['restaurant_id'];
 $restaurantSlug = (string) $restaurant['slug'];
 $purpose = strtolower(trim((string) ($_POST['purpose'] ?? $_POST['context'] ?? $_POST['type'] ?? 'gallery')));
+$slot = strtolower(trim((string) ($_POST['slot'] ?? '')));
 
-if (!in_array($purpose, ['gallery', 'menu', 'deals'], true)) {
+if (!in_array($purpose, ['gallery', 'menu', 'deals', 'settings'], true)) {
     upload_error('Validation error.', [
         'purpose' => 'Invalid upload context.',
+    ]);
+}
+
+if ($purpose === 'settings' && !in_array($slot, ['logo', 'hero', 'about'], true)) {
+    upload_error('Validation error.', [
+        'slot' => 'Invalid upload slot.',
     ]);
 }
 
@@ -179,11 +186,12 @@ if (@getimagesize($temporaryPath) === false) {
 
 [$targetDirectory, $relativeDirectory] = upload_target_directory($restaurantId, $purpose);
 $extension = $allowedExtensions[0];
+$filenamePrefix = $purpose === 'settings' ? $slot : $purpose;
 
 do {
     $fileName = sprintf(
         '%s_%s_%s.%s',
-        $purpose,
+        $filenamePrefix,
         gmdate('Ymd_His'),
         bin2hex(random_bytes(6)),
         $extension
@@ -207,6 +215,7 @@ json_response([
         'restaurant_id' => $restaurantId,
         'restaurant' => $restaurantSlug,
         'purpose' => $purpose,
+        'slot' => $purpose === 'settings' ? $slot : null,
     ],
     'message' => 'Image uploaded successfully.',
 ], 201);

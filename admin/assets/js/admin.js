@@ -22,6 +22,21 @@ const restaurantSelect = document.getElementById("restaurantSelect");
 const settingsForm = document.getElementById("settingsForm");
 const settingsFeedback = document.getElementById("settingsFeedback");
 const settingsSaveButton = document.getElementById("settingsSaveButton");
+const logoPathField = document.getElementById("logoPath");
+const logoUploadField = document.getElementById("logoUploadField");
+const logoUploadButton = document.getElementById("logoUploadButton");
+const logoPreview = document.getElementById("logoPreview");
+const logoPreviewImage = document.getElementById("logoPreviewImage");
+const heroImagePathField = document.getElementById("heroImagePath");
+const heroUploadField = document.getElementById("heroUploadField");
+const heroUploadButton = document.getElementById("heroUploadButton");
+const heroPreview = document.getElementById("heroPreview");
+const heroPreviewImage = document.getElementById("heroPreviewImage");
+const aboutImagePathField = document.getElementById("aboutImagePath");
+const aboutUploadField = document.getElementById("aboutUploadField");
+const aboutUploadButton = document.getElementById("aboutUploadButton");
+const aboutPreview = document.getElementById("aboutPreview");
+const aboutPreviewImage = document.getElementById("aboutPreviewImage");
 const publicPreviewLink = document.getElementById("publicPreviewLink");
 const categoryTableBody = document.getElementById("categoryTableBody");
 const categoryForm = document.getElementById("categoryForm");
@@ -342,6 +357,10 @@ const isUrlLike = (value) => {
   return normalized === "" || normalized.startsWith("#") || /^https?:\/\/\S+$/i.test(normalized);
 };
 
+const validateSettingsImageValue = (value) => {
+  return isValidImagePathOrUrl(value);
+};
+
 const isValidImagePathOrUrl = (value) => {
   const normalized = String(value ?? "").trim();
   if (normalized === "" || normalized.length > 255) {
@@ -572,6 +591,20 @@ const fillSettingsForm = (settings) => {
   settingsFieldNames.forEach((fieldName) => {
     setFieldValue(fieldName, settings?.[fieldName] ?? "");
   });
+
+  if (logoUploadField) {
+    logoUploadField.value = "";
+  }
+  if (heroUploadField) {
+    heroUploadField.value = "";
+  }
+  if (aboutUploadField) {
+    aboutUploadField.value = "";
+  }
+
+  updateLogoPreview(settings?.logo ?? "");
+  updateHeroPreview(settings?.hero_image ?? "");
+  updateAboutPreview(settings?.about_image ?? "");
 };
 
 const collectSettingsPayload = () => {
@@ -584,6 +617,26 @@ const collectSettingsPayload = () => {
 
 const validateSettingsPayload = (payload) => {
   const errors = {};
+
+  const validateImageField = (fieldName, label, required = false) => {
+    const value = String(payload[fieldName] || "").trim();
+
+    if (value === "") {
+      if (required) {
+        errors[fieldName] = `${label} path is required.`;
+      }
+      return;
+    }
+
+    if (value.length > 255) {
+      errors[fieldName] = `${label} path must be 255 characters or fewer.`;
+      return;
+    }
+
+    if (!validateSettingsImageValue(value)) {
+      errors[fieldName] = `${label} must be a valid image path or URL.`;
+    }
+  };
 
   if (!payload.site_title || payload.site_title.length > 150) {
     errors.site_title = "Site title must be 150 characters or fewer.";
@@ -600,17 +653,11 @@ const validateSettingsPayload = (payload) => {
   if (!isUrlLike(payload.hero_button_link)) {
     errors.hero_button_link = "Hero button link must be empty, # anchor, or a valid URL.";
   }
-  if (!payload.hero_image) {
-    errors.hero_image = "Hero image path is required.";
-  }
   if (!payload.about_title || payload.about_title.length > 191) {
     errors.about_title = "About title must be 191 characters or fewer.";
   }
   if (!payload.about_text) {
     errors.about_text = "About text is required.";
-  }
-  if (!payload.about_image) {
-    errors.about_image = "About image path is required.";
   }
   if (!payload.phone || payload.phone.length > 50) {
     errors.phone = "Phone number must be 50 characters or fewer.";
@@ -627,6 +674,10 @@ const validateSettingsPayload = (payload) => {
   if (!payload.opening_hours || payload.opening_hours.length > 191) {
     errors.opening_hours = "Opening hours must be 191 characters or fewer.";
   }
+  validateImageField("logo", "Logo");
+  validateImageField("favicon", "Favicon");
+  validateImageField("hero_image", "Hero image", true);
+  validateImageField("about_image", "About image", true);
   urlLikeFieldNames.forEach((fieldName) => {
     if (!isUrlLike(payload[fieldName])) {
       errors[fieldName] = "This field must be empty, #, or a valid URL.";
@@ -1456,6 +1507,25 @@ const updateImagePreview = (path, previewElement, previewImageElement) => {
   previewImageElement.src = previewUrl;
 };
 
+const updateSettingsImagePreview = (path, previewElement, previewImageElement, fit = "cover") => {
+  updateImagePreview(path, previewElement, previewImageElement);
+  if (previewImageElement) {
+    previewImageElement.style.objectFit = fit;
+  }
+};
+
+const updateLogoPreview = (path) => {
+  updateSettingsImagePreview(path, logoPreview, logoPreviewImage, "contain");
+};
+
+const updateHeroPreview = (path) => {
+  updateSettingsImagePreview(path, heroPreview, heroPreviewImage);
+};
+
+const updateAboutPreview = (path) => {
+  updateSettingsImagePreview(path, aboutPreview, aboutPreviewImage);
+};
+
 const updateGalleryPreview = (path) => {
   updateImagePreview(path, galleryPreview, galleryPreviewImage);
 };
@@ -1496,6 +1566,7 @@ const uploadRestaurantImage = async ({
   setLoading,
   showFeedback,
   purpose,
+  slot = "",
   maxBytes = 3 * 1024 * 1024
 }) => {
   if (!restaurantSelect || !fileInput || !imageInput) {
@@ -1523,6 +1594,9 @@ const uploadRestaurantImage = async ({
   const formData = new FormData();
   formData.append("image", file);
   formData.append("purpose", purpose);
+  if (slot) {
+    formData.append("slot", slot);
+  }
 
   setLoading(true);
   showFeedback("Uploading image...");
@@ -1557,6 +1631,22 @@ const uploadRestaurantImage = async ({
     setLoading(false);
   }
 };
+
+const createSettingsImageUploadHandler = (slot, fileInput, imageInput, previewUpdater, button) => {
+  return async () => uploadRestaurantImage({
+    fileInput,
+    imageInput,
+    previewUpdater,
+    setLoading: (loading) => setUploadButtonLoading(button, loading),
+    showFeedback: showSettingsFeedback,
+    purpose: "settings",
+    slot
+  });
+};
+
+const uploadLogoImage = createSettingsImageUploadHandler("logo", logoUploadField, logoPathField, updateLogoPreview, logoUploadButton);
+const uploadHeroImage = createSettingsImageUploadHandler("hero", heroUploadField, heroImagePathField, updateHeroPreview, heroUploadButton);
+const uploadAboutImage = createSettingsImageUploadHandler("about", aboutUploadField, aboutImagePathField, updateAboutPreview, aboutUploadButton);
 
 const getGalleryFormPayload = () => ({
   id: String(galleryIdField?.value || "").trim(),
@@ -2185,6 +2275,18 @@ if (galleryForm) {
 galleryUploadButton?.addEventListener("click", uploadGalleryImage);
 galleryImageField?.addEventListener("input", () => {
   updateGalleryPreview(galleryImageField.value);
+});
+logoUploadButton?.addEventListener("click", uploadLogoImage);
+logoPathField?.addEventListener("input", () => {
+  updateLogoPreview(logoPathField.value);
+});
+heroUploadButton?.addEventListener("click", uploadHeroImage);
+heroImagePathField?.addEventListener("input", () => {
+  updateHeroPreview(heroImagePathField.value);
+});
+aboutUploadButton?.addEventListener("click", uploadAboutImage);
+aboutImagePathField?.addEventListener("input", () => {
+  updateAboutPreview(aboutImagePathField.value);
 });
 menuItemUploadButton?.addEventListener("click", uploadMenuItemImage);
 menuItemImageField?.addEventListener("input", () => {

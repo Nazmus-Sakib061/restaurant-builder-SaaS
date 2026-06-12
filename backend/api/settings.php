@@ -213,6 +213,62 @@ function settings_validate_color(mixed $value): bool
     return (bool) preg_match('/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $value);
 }
 
+function settings_image_path_is_valid(string $image): bool
+{
+    $value = trim($image);
+    if ($value === '' || strlen($value) > 255) {
+        return false;
+    }
+
+    if (str_contains($value, "\0") || str_contains($value, '\\')) {
+        return false;
+    }
+
+    if (preg_match('/(^|[\\\\\\/])\\.\\.([\\\\\\/]|$)/', $value)) {
+        return false;
+    }
+
+    if (preg_match('/^(?:javascript|data|vbscript|file):/i', $value)) {
+        return false;
+    }
+
+    $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+
+    if (preg_match('/^[a-z][a-z0-9+.-]*:/i', $value)) {
+        $parts = parse_url($value);
+        if (!is_array($parts)) {
+            return false;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            return false;
+        }
+
+        $path = (string) ($parts['path'] ?? '');
+        if ($path === '') {
+            return false;
+        }
+    } else {
+        if (str_starts_with($value, '/')) {
+            return false;
+        }
+
+        $path = preg_split('/[?#]/', $value, 2)[0] ?? $value;
+        if ($path === '') {
+            return false;
+        }
+
+        if (!preg_match('#^(?:images/|uploads/restaurants/)#i', $path)) {
+            return false;
+        }
+    }
+
+    $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+
+    return $extension !== '' && in_array($extension, $allowedExtensions, true);
+}
+
 function settings_validate(array $input): array
 {
     $errors = [];
@@ -237,20 +293,12 @@ function settings_validate(array $input): array
         $errors['hero_button_link'] = 'Hero button link must be an empty value, # anchor, or a valid URL.';
     }
 
-    if ($input['hero_image'] === '') {
-        $errors['hero_image'] = 'Hero image path is required.';
-    }
-
     if ($input['about_title'] === '' || settings_length((string) $input['about_title']) > 191) {
         $errors['about_title'] = 'About title must be 191 characters or fewer.';
     }
 
     if ($input['about_text'] === '') {
         $errors['about_text'] = 'About text is required.';
-    }
-
-    if ($input['about_image'] === '') {
-        $errors['about_image'] = 'About image path is required.';
     }
 
     if ($input['phone'] === '' || settings_length((string) $input['phone']) > 50) {
@@ -267,6 +315,31 @@ function settings_validate(array $input): array
 
     if ($input['opening_hours'] === '' || settings_length((string) $input['opening_hours']) > 191) {
         $errors['opening_hours'] = 'Opening hours must be 191 characters or fewer.';
+    }
+
+    foreach ([
+        'logo' => ['label' => 'Logo', 'required' => false],
+        'favicon' => ['label' => 'Favicon', 'required' => false],
+        'hero_image' => ['label' => 'Hero image', 'required' => true],
+        'about_image' => ['label' => 'About image', 'required' => true],
+    ] as $key => $meta) {
+        $value = trim((string) ($input[$key] ?? ''));
+
+        if ($value === '') {
+            if ($meta['required']) {
+                $errors[$key] = $meta['label'] . ' path is required.';
+            }
+            continue;
+        }
+
+        if (settings_length($value) > 255) {
+            $errors[$key] = $meta['label'] . ' path must be 255 characters or fewer.';
+            continue;
+        }
+
+        if (!settings_image_path_is_valid($value)) {
+            $errors[$key] = $meta['label'] . ' must be a valid image path or URL.';
+        }
     }
 
     foreach (['google_map_embed_url', 'facebook_url', 'instagram_url', 'youtube_url'] as $key) {
