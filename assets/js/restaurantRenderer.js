@@ -57,6 +57,19 @@
     return `${r}, ${g}, ${b}`;
   };
 
+  const isBrightColor = (hex) => {
+    const normalized = String(hex || "").trim().replace("#", "");
+    if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+      return false;
+    }
+
+    const r = Number.parseInt(normalized.slice(0, 2), 16);
+    const g = Number.parseInt(normalized.slice(2, 4), 16);
+    const b = Number.parseInt(normalized.slice(4, 6), 16);
+    const luminance = ((0.299 * r) + (0.587 * g) + (0.114 * b)) / 255;
+    return luminance > 0.62;
+  };
+
   const setTextAll = (selector, value) => {
     document.querySelectorAll(selector).forEach((node) => {
       node.textContent = value;
@@ -155,15 +168,21 @@
   const applyTheme = (theme) => {
     const root = document.documentElement;
     const resolvedTheme = theme || {};
-    const primary = resolvedTheme.primaryColor || "#ef2b24";
-    const secondary = resolvedTheme.secondaryColor || "#0b0b0b";
-    const accent = resolvedTheme.accentColor || "#ff9f1c";
-    const background = resolvedTheme.backgroundColor || "#050505";
-    const text = resolvedTheme.textColor || "#ffffff";
+    const primary = resolvedTheme.primaryColor || "#f97316";
+    const accent = isBrightColor(resolvedTheme.accentColor || resolvedTheme.secondaryColor)
+      ? (resolvedTheme.accentColor || resolvedTheme.secondaryColor)
+      : "#facc15";
+    const background = resolvedTheme.backgroundColor || "#0b0f14";
+    const text = resolvedTheme.textColor || "#f8fafc";
     const button = resolvedTheme.buttonColor || primary;
+    const surface = "#10151d";
+    const surfaceStrong = "#1b2430";
+    const border = "rgba(255, 255, 255, 0.10)";
+    const borderStrong = "rgba(255, 255, 255, 0.18)";
+    const muted = "#94a3b8";
 
     root.style.setProperty("--primary-color", primary);
-    root.style.setProperty("--secondary-color", secondary);
+    root.style.setProperty("--secondary-color", surface);
     root.style.setProperty("--accent-color", accent);
     root.style.setProperty("--background-color", background);
     root.style.setProperty("--text-color", text);
@@ -171,11 +190,18 @@
     root.style.setProperty("--primary-rgb", hexToRgb(primary));
     root.style.setProperty("--accent-rgb", hexToRgb(accent));
     root.style.setProperty("--bg", background);
-    root.style.setProperty("--bg-alt", secondary);
+    root.style.setProperty("--bg-alt", surface);
     root.style.setProperty("--text", text);
     root.style.setProperty("--accent", primary);
     root.style.setProperty("--accent-strong", button);
     root.style.setProperty("--accent-secondary", accent);
+    root.style.setProperty("--surface", "rgba(21, 27, 36, 0.84)");
+    root.style.setProperty("--surface-strong", "rgba(27, 36, 48, 0.92)");
+    root.style.setProperty("--border", border);
+    root.style.setProperty("--border-strong", borderStrong);
+    root.style.setProperty("--muted", muted);
+    root.style.setProperty("--shadow", "0 20px 60px rgba(0, 0, 0, 0.34)");
+    root.style.setProperty("--shadow-soft", "0 16px 45px rgba(0, 0, 0, 0.42)");
   };
 
   const renderBrand = () => {

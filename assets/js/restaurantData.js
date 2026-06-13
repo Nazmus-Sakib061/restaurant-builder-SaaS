@@ -15,12 +15,12 @@ window.RESTAURANT_PROFILES = {
     logo: "",
     currency: "৳",
     theme: {
-      primaryColor: "#ef2b24",
-      secondaryColor: "#0b0b0b",
-      accentColor: "#ff9f1c",
-      backgroundColor: "#050505",
-      textColor: "#ffffff",
-      buttonColor: "#ff3b30"
+      primaryColor: "#f97316",
+      secondaryColor: "#10151D",
+      accentColor: "#facc15",
+      backgroundColor: "#0B0F14",
+      textColor: "#F8FAFC",
+      buttonColor: "#EA580C"
     },
     hero: {
       badge: "HOT & FRESH",
@@ -237,12 +237,12 @@ window.RESTAURANT_PROFILES = {
     logo: "",
     currency: "৳",
     theme: {
-      primaryColor: "#6f4e37",
-      secondaryColor: "#120d0a",
-      accentColor: "#d7a86e",
-      backgroundColor: "#090603",
-      textColor: "#ffffff",
-      buttonColor: "#6f4e37"
+      primaryColor: "#d97706",
+      secondaryColor: "#10151D",
+      accentColor: "#facc15",
+      backgroundColor: "#0B0F14",
+      textColor: "#F8FAFC",
+      buttonColor: "#b45309"
     },
     hero: {
       badge: "AROMA & FRESH",
@@ -426,12 +426,12 @@ window.RESTAURANT_PROFILES = {
     logo: "",
     currency: "৳",
     theme: {
-      primaryColor: "#b45309",
-      secondaryColor: "#160d04",
+      primaryColor: "#f97316",
+      secondaryColor: "#10151D",
       accentColor: "#facc15",
-      backgroundColor: "#050302",
-      textColor: "#ffffff",
-      buttonColor: "#b45309"
+      backgroundColor: "#0B0F14",
+      textColor: "#F8FAFC",
+      buttonColor: "#ea580c"
     },
     hero: {
       badge: "SPICE & FEAST",

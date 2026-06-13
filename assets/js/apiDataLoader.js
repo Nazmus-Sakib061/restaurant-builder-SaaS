@@ -21,6 +21,49 @@
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+  const isValidHexColor = (value) => /^#?[0-9a-fA-F]{6}$/.test(String(value || "").trim());
+
+  const hexToRgb = (value) => {
+    const normalized = String(value || "").trim().replace("#", "");
+    if (!isValidHexColor(normalized)) {
+      return null;
+    }
+
+    const r = Number.parseInt(normalized.slice(0, 2), 16);
+    const g = Number.parseInt(normalized.slice(2, 4), 16);
+    const b = Number.parseInt(normalized.slice(4, 6), 16);
+    return { r, g, b };
+  };
+
+  const isBrightColor = (value) => {
+    const rgb = hexToRgb(value);
+    if (!rgb) {
+      return false;
+    }
+
+    const luminance = ((0.299 * rgb.r) + (0.587 * rgb.g) + (0.114 * rgb.b)) / 255;
+    return luminance > 0.62;
+  };
+
+  const normalizeTheme = (theme = {}) => {
+    const rawPrimary = String(theme.primary_color || "#f97316").trim();
+    const rawAccent = String(theme.secondary_color || theme.accent_color || "#facc15").trim();
+    const primary = isValidHexColor(rawPrimary) ? rawPrimary : "#f97316";
+    const accent = isValidHexColor(rawAccent) ? rawAccent : "#facc15";
+    const background = isValidHexColor(theme.background_color) ? theme.background_color : "#0b0f14";
+    const text = isValidHexColor(theme.text_color) ? theme.text_color : "#f8fafc";
+    const button = isValidHexColor(theme.button_color) ? theme.button_color : primary;
+
+    return {
+      primaryColor: primary,
+      secondaryColor: "#10151d",
+      accentColor: isBrightColor(accent) ? accent : "#facc15",
+      backgroundColor: background,
+      textColor: text,
+      buttonColor: button
+    };
+  };
+
   const demoProfile = (key = DEFAULT_DEMO) => {
     if (typeof window.getRestaurantDemoProfile === "function") {
       return window.getRestaurantDemoProfile(key);
@@ -81,14 +124,7 @@
       tagline: restaurant.business_type ? `${restaurant.business_type} Restaurant` : "Premium Restaurant",
       logo: settings.logo || "",
       currency: "৳",
-      theme: {
-        primaryColor: theme.primary_color || "#ef2b24",
-        secondaryColor: theme.secondary_color || "#0b0b0b",
-        accentColor: theme.accent_color || "#ff9f1c",
-        backgroundColor: theme.background_color || "#050505",
-        textColor: theme.text_color || "#ffffff",
-        buttonColor: theme.button_color || theme.primary_color || "#ff3b30"
-      },
+      theme: normalizeTheme(theme),
       hero: {
         badge: "HOT & FRESH",
         title: settings.hero_title || restaurant.name || "Welcome",
