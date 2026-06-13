@@ -1998,24 +1998,25 @@ const saveGallery = async (event) => {
     return;
   }
 
-  if (selectedFile) {
-    showGalleryFeedback("Uploading image...");
-    const uploadedPath = await uploadGalleryImage({ silent: true });
-    if (!uploadedPath) {
-      showGalleryFeedback("Image upload failed. Gallery item was not saved.", "error");
-      return;
-    }
-
-    payload.image = uploadedPath;
-    if (galleryImageField) {
-      galleryImageField.value = uploadedPath;
-    }
-  }
-
   setGalleryButtonLoading(true);
-  showGalleryFeedback("Saving gallery item...");
 
   try {
+    if (selectedFile) {
+      showGalleryFeedback("Uploading image...");
+      const uploadedPath = await uploadGalleryImage({ silent: true });
+      if (!uploadedPath) {
+        showGalleryFeedback("Image upload failed. Gallery item was not saved.", "error");
+        return;
+      }
+
+      payload.image = uploadedPath;
+      if (galleryImageField) {
+        galleryImageField.value = uploadedPath;
+      }
+    }
+
+    showGalleryFeedback("Saving gallery item...");
+
     const method = payload.id ? "PUT" : "POST";
     const result = await fetchJson("gallery.php", {
       method,
