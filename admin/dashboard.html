@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Pizza House admin dashboard demo for future CRUD management.">
   <title>Pizza House Admin | Dashboard</title>
-  <link rel="stylesheet" href="assets/css/admin.css?v=image-upload-gallery-3">
+  <link rel="stylesheet" href="assets/css/admin.css?v=gallery-upload-preview-fix-1">
 </head>
 <body class="admin-page">
   <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
@@ -466,7 +466,7 @@
                   <label for="galleryTitleField">Title</label>
                   <input id="galleryTitleField" class="field-control" name="title" type="text" maxlength="150">
                 </div>
-                <div class="form-group">
+                <div class="form-group" hidden>
                   <label for="galleryImageField">Image Path / URL</label>
                   <input id="galleryImageField" class="field-control" name="image" type="text" placeholder="images/hero image.png">
                 </div>
@@ -489,6 +489,7 @@
                 <div class="form-group gallery-preview" id="galleryPreview" hidden>
                   <span class="gallery-preview__label">Image Preview</span>
                   <img id="galleryPreviewImage" src="" alt="Selected gallery image preview">
+                  <span class="gallery-preview__fallback" id="galleryPreviewFallback" hidden>Preview unavailable</span>
                 </div>
                 <div class="form-group">
                   <label for="galleryAltField">Alt Text</label>
@@ -746,6 +747,6 @@
     </div>
   </div>
 
-  <script src="assets/js/admin.js?v=settings-upload-1"></script>
+  <script src="assets/js/admin.js?v=gallery-upload-preview-fix-1"></script>
 </body>
 </html>

@@ -60,7 +60,7 @@ function gallery_validate_input(array $input): array
     } elseif (strlen($input['image']) > 255) {
         $errors['image'] = 'Image path must be 255 characters or fewer.';
     } elseif (!gallery_image_path_is_valid($input['image'])) {
-        $errors['image'] = 'Image must be a valid image path or URL.';
+        $errors['image'] = 'Image must be a valid uploaded image path.';
     }
 
     if ($input['alt_text'] !== '' && strlen($input['alt_text']) > 255) {
@@ -104,33 +104,20 @@ function gallery_image_path_is_valid(string $image): bool
     $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
 
     if (preg_match('/^[a-z][a-z0-9+.-]*:/i', $value)) {
-        $parts = parse_url($value);
-        if (!is_array($parts)) {
-            return false;
-        }
+        return false;
+    }
 
-        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
-        if (!in_array($scheme, ['http', 'https'], true)) {
-            return false;
-        }
+    if (str_starts_with($value, '/')) {
+        return false;
+    }
 
-        $path = (string) ($parts['path'] ?? '');
-        if ($path === '') {
-            return false;
-        }
-    } else {
-        if (str_starts_with($value, '/')) {
-            return false;
-        }
+    $path = preg_split('/[?#]/', $value, 2)[0] ?? $value;
+    if ($path === '') {
+        return false;
+    }
 
-        $path = preg_split('/[?#]/', $value, 2)[0] ?? $value;
-        if ($path === '') {
-            return false;
-        }
-
-        if (!preg_match('#^(?:images/|uploads/restaurants/)#i', $path)) {
-            return false;
-        }
+    if (!preg_match('#^(?:images/|uploads/restaurants/)#i', $path)) {
+        return false;
     }
 
     $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));

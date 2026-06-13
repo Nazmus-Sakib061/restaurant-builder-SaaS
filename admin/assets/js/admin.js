@@ -105,6 +105,7 @@ const galleryUploadField = document.getElementById("galleryUploadField");
 const galleryUploadButton = document.getElementById("galleryUploadButton");
 const galleryPreview = document.getElementById("galleryPreview");
 const galleryPreviewImage = document.getElementById("galleryPreviewImage");
+const galleryPreviewFallback = document.getElementById("galleryPreviewFallback");
 const galleryAltField = document.getElementById("galleryAltField");
 const gallerySortField = document.getElementById("gallerySortField");
 const galleryStatusField = document.getElementById("galleryStatusField");
@@ -123,6 +124,8 @@ const menuSnapshot = [
 ];
 
 const categories = ["Pizza", "Burger", "Shawarma", "Drinks"];
+
+let galleryPreviewObjectUrl = "";
 
 const settingsFieldNames = [
   "logo",
@@ -1491,7 +1494,14 @@ const adminAssetUrl = (path) => {
   return `../${value.replace(/^(?:\.\/)+/, "")}`;
 };
 
-const updateImagePreview = (path, previewElement, previewImageElement) => {
+const releaseGalleryPreviewObjectUrl = () => {
+  if (galleryPreviewObjectUrl && galleryPreviewObjectUrl.startsWith("blob:")) {
+    URL.revokeObjectURL(galleryPreviewObjectUrl);
+  }
+  galleryPreviewObjectUrl = "";
+};
+
+const updateImagePreview = (path, previewElement, previewImageElement, fallbackElement = null) => {
   if (!previewElement || !previewImageElement) {
     return;
   }
@@ -1500,10 +1510,35 @@ const updateImagePreview = (path, previewElement, previewImageElement) => {
   if (!previewUrl) {
     previewElement.hidden = true;
     previewImageElement.removeAttribute("src");
+    previewImageElement.hidden = false;
+    previewImageElement.onerror = null;
+    previewImageElement.onload = null;
+    if (fallbackElement) {
+      fallbackElement.hidden = true;
+    }
     return;
   }
 
   previewElement.hidden = false;
+  previewImageElement.hidden = false;
+  if (fallbackElement) {
+    fallbackElement.hidden = true;
+  }
+  previewImageElement.onload = () => {
+    previewImageElement.hidden = false;
+    if (fallbackElement) {
+      fallbackElement.hidden = true;
+    }
+  };
+  previewImageElement.onerror = () => {
+    previewImageElement.hidden = true;
+    if (fallbackElement) {
+      fallbackElement.hidden = false;
+      previewElement.hidden = false;
+    } else {
+      previewElement.hidden = true;
+    }
+  };
   previewImageElement.src = previewUrl;
 };
 
@@ -1527,7 +1562,20 @@ const updateAboutPreview = (path) => {
 };
 
 const updateGalleryPreview = (path) => {
-  updateImagePreview(path, galleryPreview, galleryPreviewImage);
+  releaseGalleryPreviewObjectUrl();
+  updateImagePreview(path, galleryPreview, galleryPreviewImage, galleryPreviewFallback);
+};
+
+const updateGalleryPreviewFromFile = (file) => {
+  if (!(file instanceof File)) {
+    releaseGalleryPreviewObjectUrl();
+    updateGalleryPreview("");
+    return;
+  }
+
+  releaseGalleryPreviewObjectUrl();
+  galleryPreviewObjectUrl = URL.createObjectURL(file);
+  updateImagePreview(galleryPreviewObjectUrl, galleryPreview, galleryPreviewImage, galleryPreviewFallback);
 };
 
 const updateMenuItemPreview = (path) => {
@@ -1587,7 +1635,7 @@ const uploadRestaurantImage = async ({
 
   if (file.size > maxBytes) {
     showFeedback("Image must be 3 MB or smaller.", "error");
-    return;
+    return null;
   }
 
   const selectedSlug = restaurantSelect.value || "demo-pizza-house";
@@ -1625,8 +1673,10 @@ const uploadRestaurantImage = async ({
     imageInput.value = result.data.path;
     previewUpdater(result.data.path);
     showFeedback(result.message || "Image uploaded successfully.");
+    return result.data.path;
   } catch (error) {
     showFeedback(error.message || "Could not upload image.", "error");
+    return null;
   } finally {
     setLoading(false);
   }
@@ -1658,7 +1708,35 @@ const getGalleryFormPayload = () => ({
   status: String(galleryStatusField?.value || "active").trim()
 });
 
-const validateGalleryFormPayload = (payload) => {
+const isGalleryImagePath = (value) => {
+  const normalized = String(value ?? "").trim();
+  if (normalized === "" || normalized.length > 255) {
+    return false;
+  }
+
+  if (normalized.includes("\\") || normalized.includes("\0")) {
+    return false;
+  }
+
+  if (/(^|[\\/])\.\.([\\/]|$)/.test(normalized)) {
+    return false;
+  }
+
+  if (normalized.startsWith("/")) {
+    return false;
+  }
+
+  const pathPart = normalized.split(/[?#]/)[0];
+  if (!/^(?:images\/|uploads\/restaurants\/)/i.test(pathPart)) {
+    return false;
+  }
+
+  const extension = String(pathPart.split(".").pop() || "").toLowerCase();
+  return ["jpg", "jpeg", "png", "webp"].includes(extension);
+};
+
+const validateGalleryFormPayload = (payload, options = {}) => {
+  const { skipImageValidation = false } = options;
   const errors = {};
 
   if (!payload.title) {
@@ -1671,12 +1749,14 @@ const validateGalleryFormPayload = (payload) => {
     errors.caption = "Caption must be 1000 characters or fewer.";
   }
 
-  if (!payload.image) {
-    errors.image = "Gallery image is required.";
-  } else if (payload.image.length > 255) {
-    errors.image = "Image path must be 255 characters or fewer.";
-  } else if (!isValidImagePathOrUrl(payload.image)) {
-    errors.image = "Image must be a valid image path or URL.";
+  if (!skipImageValidation) {
+    if (!payload.image) {
+      errors.image = "Gallery image is required.";
+    } else if (payload.image.length > 255) {
+      errors.image = "Image path must be 255 characters or fewer.";
+    } else if (!isGalleryImagePath(payload.image)) {
+      errors.image = "Image must be a valid uploaded image path.";
+    }
   }
 
   if (payload.alt_text.length > 255) {
@@ -1700,6 +1780,7 @@ const fillGalleryForm = (gallery = {}) => {
     return;
   }
 
+  releaseGalleryPreviewObjectUrl();
   galleryIdField.value = gallery.id ? String(gallery.id) : "";
   galleryTitleField.value = gallery.title || "";
   galleryCaptionField.value = gallery.caption || "";
@@ -1707,6 +1788,9 @@ const fillGalleryForm = (gallery = {}) => {
   galleryAltField.value = gallery.alt_text || "";
   gallerySortField.value = gallery.sort_order ?? 0;
   galleryStatusField.value = gallery.status || "active";
+  if (galleryUploadField) {
+    galleryUploadField.value = "";
+  }
   updateGalleryPreview(gallery.image || "");
 
   if (gallerySaveButton) {
@@ -1715,6 +1799,7 @@ const fillGalleryForm = (gallery = {}) => {
 };
 
 const resetGalleryForm = () => {
+  releaseGalleryPreviewObjectUrl();
   fillGalleryForm({});
   if (galleryForm) {
     galleryForm.reset();
@@ -1735,14 +1820,83 @@ const resetGalleryForm = () => {
   showGalleryFeedback("");
 };
 
-const uploadGalleryImage = async () => uploadRestaurantImage({
-  fileInput: galleryUploadField,
-  imageInput: galleryImageField,
-  previewUpdater: updateGalleryPreview,
-  setLoading: setGalleryUploadButtonLoading,
-  showFeedback: showGalleryFeedback,
-  purpose: "gallery"
-});
+const uploadGalleryImage = async (options = {}) => {
+  const { silent = false } = options;
+  const uploadedPath = await uploadRestaurantImage({
+    fileInput: galleryUploadField,
+    imageInput: galleryImageField,
+    previewUpdater: updateGalleryPreview,
+    setLoading: setGalleryUploadButtonLoading,
+    showFeedback: silent ? () => {} : showGalleryFeedback,
+    purpose: "gallery"
+  });
+
+  if (uploadedPath && galleryUploadField) {
+    galleryUploadField.value = "";
+  }
+
+  return uploadedPath;
+};
+
+const validateGallerySelectedFile = (file) => {
+  if (!(file instanceof File)) {
+    return "Please choose an image before saving.";
+  }
+
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  const allowedExtensions = ["jpg", "jpeg", "png", "webp"];
+  const fileName = String(file.name || "");
+  const extension = fileName.includes(".") ? fileName.split(".").pop().toLowerCase() : "";
+
+  if (file.size < 1) {
+    return "Please choose an image before saving.";
+  }
+
+  if (file.size > 3 * 1024 * 1024) {
+    return "Image must be 3 MB or smaller.";
+  }
+
+  if (file.type && !allowedTypes.includes(file.type)) {
+    return "Only JPG, PNG, and WebP images are allowed.";
+  }
+
+  if (!allowedExtensions.includes(extension)) {
+    return "Only JPG, PNG, and WebP images are allowed.";
+  }
+
+  return "";
+};
+
+const handleGalleryUploadSelection = () => {
+  const selectedFile = galleryUploadField?.files?.[0] || null;
+  const selectedImagePath = String(galleryImageField?.value || "").trim();
+
+  if (!selectedFile) {
+    if (selectedImagePath) {
+      updateGalleryPreview(selectedImagePath);
+    } else {
+      updateGalleryPreview("");
+    }
+    return;
+  }
+
+  const validationMessage = validateGallerySelectedFile(selectedFile);
+  if (validationMessage) {
+    showGalleryFeedback(validationMessage, "error");
+    if (galleryUploadField) {
+      galleryUploadField.value = "";
+    }
+    if (selectedImagePath) {
+      updateGalleryPreview(selectedImagePath);
+    } else {
+      updateGalleryPreview("");
+    }
+    return;
+  }
+
+  updateGalleryPreviewFromFile(selectedFile);
+  showGalleryFeedback("");
+};
 
 const uploadMenuItemImage = async () => uploadRestaurantImage({
   fileInput: menuItemUploadField,
@@ -1824,12 +1978,38 @@ const saveGallery = async (event) => {
 
   const selectedSlug = restaurantSelect.value || "demo-pizza-house";
   const payload = getGalleryFormPayload();
-  const errors = validateGalleryFormPayload(payload);
+  const selectedFile = galleryUploadField?.files?.[0] || null;
+  const hasExistingImage = String(payload.image || "").trim() !== "";
+  const errors = validateGalleryFormPayload(payload, {
+    skipImageValidation: Boolean(selectedFile)
+  });
+
+  if (!selectedFile && !hasExistingImage) {
+    errors.image = "Please choose an image before saving.";
+  }
 
   if (Object.keys(errors).length > 0) {
     showGalleryFeedback("Validation error. Check the highlighted fields.", "error");
-    focusFirstInvalidField(galleryForm, errors);
+    if (errors.image === "Please choose an image before saving." && galleryUploadField) {
+      galleryUploadField.focus();
+    } else {
+      focusFirstInvalidField(galleryForm, errors);
+    }
     return;
+  }
+
+  if (selectedFile) {
+    showGalleryFeedback("Uploading image...");
+    const uploadedPath = await uploadGalleryImage({ silent: true });
+    if (!uploadedPath) {
+      showGalleryFeedback("Image upload failed. Gallery item was not saved.", "error");
+      return;
+    }
+
+    payload.image = uploadedPath;
+    if (galleryImageField) {
+      galleryImageField.value = uploadedPath;
+    }
   }
 
   setGalleryButtonLoading(true);
@@ -2273,9 +2453,7 @@ if (galleryForm) {
 }
 
 galleryUploadButton?.addEventListener("click", uploadGalleryImage);
-galleryImageField?.addEventListener("input", () => {
-  updateGalleryPreview(galleryImageField.value);
-});
+galleryUploadField?.addEventListener("change", handleGalleryUploadSelection);
 logoUploadButton?.addEventListener("click", uploadLogoImage);
 logoPathField?.addEventListener("input", () => {
   updateLogoPreview(logoPathField.value);
