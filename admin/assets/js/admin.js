@@ -1599,6 +1599,17 @@ const setGalleryUploadButtonLoading = (loading) => {
   setUploadButtonLoading(galleryUploadButton, loading);
 };
 
+const setGalleryButtonLoading = (loading) => {
+  if (!gallerySaveButton) {
+    return;
+  }
+
+  gallerySaveButton.disabled = loading;
+  gallerySaveButton.textContent = loading
+    ? "Saving..."
+    : (galleryIdField?.value ? "Update Gallery Item" : "Save Gallery Item");
+};
+
 const setMenuItemUploadButtonLoading = (loading) => {
   setUploadButtonLoading(menuItemUploadButton, loading);
 };
@@ -2027,9 +2038,9 @@ const saveGallery = async (event) => {
       }
     });
 
-    showGalleryFeedback(result.message || "Gallery item saved successfully.");
     resetGalleryForm();
     await loadGalleryForRestaurant(selectedSlug);
+    showGalleryFeedback(result.message || "Gallery item saved successfully.");
   } catch (error) {
     showGalleryFeedback(error.message || "Could not save gallery item.", "error");
     if (error.details) {
@@ -2077,11 +2088,11 @@ const deleteGallery = async (id) => {
       }
     });
 
-    showGalleryFeedback(result.message || "Gallery item archived successfully.");
     if (String(galleryIdField?.value || "") === String(gallery.id)) {
       resetGalleryForm();
     }
     await loadGalleryForRestaurant(selectedSlug);
+    showGalleryFeedback(result.message || "Gallery item archived successfully.");
   } catch (error) {
     showGalleryFeedback(error.message || "Could not delete gallery item.", "error");
   } finally {
