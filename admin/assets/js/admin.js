@@ -327,6 +327,80 @@ const showSettingsFeedback = (message, state = "success") => {
   settingsFeedback.classList.toggle("is-error", state === "error");
 };
 
+const adminToastState = {
+  host: null
+};
+
+const ensureAdminToastHost = () => {
+  if (adminToastState.host && document.body.contains(adminToastState.host)) {
+    return adminToastState.host;
+  }
+
+  adminToastState.host = document.getElementById("adminToastHost");
+  if (!adminToastState.host) {
+    adminToastState.host = document.createElement("div");
+    adminToastState.host.id = "adminToastHost";
+    adminToastState.host.className = "admin-toast-host";
+    adminToastState.host.setAttribute("aria-live", "polite");
+    adminToastState.host.setAttribute("aria-atomic", "true");
+    document.body.appendChild(adminToastState.host);
+  }
+
+  return adminToastState.host;
+};
+
+const showAdminToast = (message, type = "success") => {
+  const text = String(message ?? "").trim();
+  if (!text) {
+    return null;
+  }
+
+  const host = ensureAdminToastHost();
+  if (!host) {
+    return null;
+  }
+
+  const safeType = ["success", "error", "warning"].includes(type) ? type : "success";
+  const toast = document.createElement("div");
+  let timerId = null;
+
+  toast.className = `admin-toast admin-toast--${safeType}`;
+  toast.setAttribute("role", safeType === "error" ? "alert" : "status");
+  toast.innerHTML = `
+    <span class="admin-toast__dot" aria-hidden="true"></span>
+    <div class="admin-toast__body">
+      <strong class="admin-toast__title">${safeType === "error" ? "Error" : safeType === "warning" ? "Notice" : "Success"}</strong>
+      <p class="admin-toast__message">${escapeHTML(text)}</p>
+    </div>
+    <button type="button" class="admin-toast__close" aria-label="Dismiss notification">×</button>
+  `;
+
+  const dismissToast = () => {
+    if (!toast.isConnected) {
+      return;
+    }
+
+    toast.classList.remove("is-visible");
+    if (timerId !== null) {
+      window.clearTimeout(timerId);
+      timerId = null;
+    }
+
+    window.setTimeout(() => {
+      toast.remove();
+    }, 220);
+  };
+
+  toast.querySelector(".admin-toast__close")?.addEventListener("click", dismissToast);
+  host.appendChild(toast);
+  window.requestAnimationFrame(() => {
+    toast.classList.add("is-visible");
+  });
+  timerId = window.setTimeout(dismissToast, 4500);
+
+  return toast;
+};
+
 const setFieldValue = (name, value) => {
   if (!settingsForm) {
     return;
@@ -799,6 +873,7 @@ const saveSettings = async (event) => {
 
   if (Object.keys(errors).length > 0) {
     showSettingsFeedback("Validation error. Check the highlighted fields.", "error");
+    showAdminToast("Validation error. Check the highlighted fields.", "warning");
     focusFirstSettingsField(errors);
     return;
   }
@@ -820,12 +895,15 @@ const saveSettings = async (event) => {
     const result = await response.json();
 
     if (!response.ok || !result.success) {
+      const message = result && result.errors
+        ? Object.values(result.errors)[0] || result.message || "Could not save settings."
+        : result.message || "Could not save settings.";
       if (result && result.errors) {
-        const firstError = Object.values(result.errors)[0];
-        showSettingsFeedback(firstError || result.message || "Could not save settings.", "error");
+        showSettingsFeedback(message, "error");
       } else {
-        showSettingsFeedback(result.message || "Could not save settings.", "error");
+        showSettingsFeedback(message, "error");
       }
+      showAdminToast(message, "error");
       return;
     }
 
@@ -835,9 +913,12 @@ const saveSettings = async (event) => {
     renderSettingsSummary();
     updatePublicPreviewLink(currentRestaurant?.slug || selectedSlug);
     showSettingsFeedback(result.message || "Settings saved successfully.");
+    showAdminToast(result.message || "Settings saved successfully.");
     window.localStorage.setItem(selectedRestaurantKey, currentRestaurant?.slug || selectedSlug);
   } catch (error) {
-    showSettingsFeedback(error.message || "Unexpected error while saving settings.", "error");
+    const message = error.message || "Unexpected error while saving settings.";
+    showSettingsFeedback(message, "error");
+    showAdminToast(message, "error");
   } finally {
     setButtonLoading(false);
   }
@@ -1384,6 +1465,7 @@ const saveDeal = async (event) => {
 
   if (Object.keys(errors).length > 0) {
     showDealFeedback("Validation error. Check the highlighted fields.", "error");
+    showAdminToast("Validation error. Check the highlighted fields.", "warning");
     focusFirstInvalidField(dealForm, errors);
     return;
   }
@@ -1406,11 +1488,15 @@ const saveDeal = async (event) => {
       }
     });
 
-    showDealFeedback(result.message || "Deal saved successfully.");
     resetDealForm();
     await loadDealsForRestaurant(selectedSlug);
+    const successMessage = result.message || "Deal saved successfully.";
+    showDealFeedback(successMessage);
+    showAdminToast(successMessage);
   } catch (error) {
-    showDealFeedback(error.message || "Could not save deal.", "error");
+    const message = error.message || "Could not save deal.";
+    showDealFeedback(message, "error");
+    showAdminToast(message, "error");
     if (error.details) {
       focusFirstInvalidField(dealForm, error.details);
     }
@@ -1428,6 +1514,7 @@ const editDeal = (id) => {
 
   fillDealForm(deal);
   showDealFeedback(`Editing ${deal.title}.`);
+  showAdminToast(`Editing ${deal.title}.`, "warning");
   dealForm?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
@@ -1456,13 +1543,17 @@ const deleteDeal = async (id) => {
       }
     });
 
-    showDealFeedback(result.message || "Deal archived successfully.");
     if (String(dealIdField?.value || "") === String(deal.id)) {
       resetDealForm();
     }
     await loadDealsForRestaurant(selectedSlug);
+    const successMessage = result.message || "Deal archived successfully.";
+    showDealFeedback(successMessage);
+    showAdminToast(successMessage);
   } catch (error) {
-    showDealFeedback(error.message || "Could not delete deal.", "error");
+    const message = error.message || "Could not delete deal.";
+    showDealFeedback(message, "error");
+    showAdminToast(message, "error");
   } finally {
     setDealButtonLoading(false);
   }
@@ -1626,27 +1717,33 @@ const uploadRestaurantImage = async ({
   showFeedback,
   purpose,
   slot = "",
-  maxBytes = 3 * 1024 * 1024
+  maxBytes = 3 * 1024 * 1024,
+  showToast = true
 }) => {
+  const reportError = (message) => {
+    showFeedback(message, "error");
+    if (showToast) {
+      showAdminToast(message, "error");
+    }
+    return null;
+  };
+
   if (!restaurantSelect || !fileInput || !imageInput) {
-    return;
+    return null;
   }
 
   const file = fileInput.files?.[0];
   if (!file) {
-    showFeedback("Please select an image to upload.", "error");
-    return;
+    return reportError("Please select an image to upload.");
   }
 
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
   if (file.type && !allowedTypes.includes(file.type)) {
-    showFeedback("Only JPG, PNG, and WebP images are allowed.", "error");
-    return;
+    return reportError("Only JPG, PNG, and WebP images are allowed.");
   }
 
   if (file.size > maxBytes) {
-    showFeedback("Image must be 3 MB or smaller.", "error");
-    return null;
+    return reportError("Image must be 3 MB or smaller.");
   }
 
   const selectedSlug = restaurantSelect.value || "demo-pizza-house";
@@ -1684,9 +1781,16 @@ const uploadRestaurantImage = async ({
     imageInput.value = result.data.path;
     previewUpdater(result.data.path);
     showFeedback(result.message || "Image uploaded successfully.");
+    if (showToast) {
+      showAdminToast(result.message || "Image uploaded successfully.");
+    }
     return result.data.path;
   } catch (error) {
-    showFeedback(error.message || "Could not upload image.", "error");
+    const message = error.message || "Could not upload image.";
+    showFeedback(message, "error");
+    if (showToast) {
+      showAdminToast(message, "error");
+    }
     return null;
   } finally {
     setLoading(false);
@@ -1839,7 +1943,8 @@ const uploadGalleryImage = async (options = {}) => {
     previewUpdater: updateGalleryPreview,
     setLoading: setGalleryUploadButtonLoading,
     showFeedback: silent ? () => {} : showGalleryFeedback,
-    purpose: "gallery"
+    purpose: "gallery",
+    showToast: !silent
   });
 
   if (uploadedPath && galleryUploadField) {
@@ -1894,6 +1999,7 @@ const handleGalleryUploadSelection = () => {
   const validationMessage = validateGallerySelectedFile(selectedFile);
   if (validationMessage) {
     showGalleryFeedback(validationMessage, "error");
+    showAdminToast(validationMessage, "error");
     if (galleryUploadField) {
       galleryUploadField.value = "";
     }
@@ -2001,6 +2107,7 @@ const saveGallery = async (event) => {
 
   if (Object.keys(errors).length > 0) {
     showGalleryFeedback("Validation error. Check the highlighted fields.", "error");
+    showAdminToast("Validation error. Check the highlighted fields.", "warning");
     if (errors.image === "Please choose an image before saving." && galleryUploadField) {
       galleryUploadField.focus();
     } else {
@@ -2016,7 +2123,9 @@ const saveGallery = async (event) => {
       showGalleryFeedback("Uploading image...");
       const uploadedPath = await uploadGalleryImage({ silent: true });
       if (!uploadedPath) {
-        showGalleryFeedback("Image upload failed. Gallery item was not saved.", "error");
+        const message = "Image upload failed. Gallery item was not saved.";
+        showGalleryFeedback(message, "error");
+        showAdminToast(message, "error");
         return;
       }
 
@@ -2040,9 +2149,13 @@ const saveGallery = async (event) => {
 
     resetGalleryForm();
     await loadGalleryForRestaurant(selectedSlug);
-    showGalleryFeedback(result.message || "Gallery item saved successfully.");
+    const successMessage = result.message || "Gallery item saved successfully.";
+    showGalleryFeedback(successMessage);
+    showAdminToast(successMessage);
   } catch (error) {
-    showGalleryFeedback(error.message || "Could not save gallery item.", "error");
+    const message = error.message || "Could not save gallery item.";
+    showGalleryFeedback(message, "error");
+    showAdminToast(message, "error");
     if (error.details) {
       focusFirstInvalidField(galleryForm, error.details);
     }
@@ -2060,6 +2173,7 @@ const editGallery = (id) => {
 
   fillGalleryForm(gallery);
   showGalleryFeedback(`Editing ${gallery.title}.`);
+  showAdminToast(`Editing ${gallery.title}.`, "warning");
   galleryForm?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
@@ -2092,9 +2206,13 @@ const deleteGallery = async (id) => {
       resetGalleryForm();
     }
     await loadGalleryForRestaurant(selectedSlug);
-    showGalleryFeedback(result.message || "Gallery item archived successfully.");
+    const successMessage = result.message || "Gallery item archived successfully.";
+    showGalleryFeedback(successMessage);
+    showAdminToast(successMessage);
   } catch (error) {
-    showGalleryFeedback(error.message || "Could not delete gallery item.", "error");
+    const message = error.message || "Could not delete gallery item.";
+    showGalleryFeedback(message, "error");
+    showAdminToast(message, "error");
   } finally {
     setGalleryButtonLoading(false);
   }
@@ -2213,6 +2331,7 @@ const saveCategory = async (event) => {
 
   if (Object.keys(errors).length > 0) {
     showCategoryFeedback("Validation error. Check the highlighted fields.", "error");
+    showAdminToast("Validation error. Check the highlighted fields.", "warning");
     focusFirstInvalidField(categoryForm, errors);
     return;
   }
@@ -2231,11 +2350,15 @@ const saveCategory = async (event) => {
       }
     });
 
-    showCategoryFeedback(result.message || "Category saved successfully.");
     resetCategoryForm();
     await refreshRestaurantCrudData(selectedSlug);
+    const successMessage = result.message || "Category saved successfully.";
+    showCategoryFeedback(successMessage);
+    showAdminToast(successMessage);
   } catch (error) {
-    showCategoryFeedback(error.message || "Could not save category.", "error");
+    const message = error.message || "Could not save category.";
+    showCategoryFeedback(message, "error");
+    showAdminToast(message, "error");
     if (error.details) {
       focusFirstInvalidField(categoryForm, error.details);
     }
@@ -2257,6 +2380,7 @@ const saveMenuItem = async (event) => {
 
   if (Object.keys(errors).length > 0) {
     showMenuItemFeedback("Validation error. Check the highlighted fields.", "error");
+    showAdminToast("Validation error. Check the highlighted fields.", "warning");
     focusFirstInvalidField(menuItemForm, errors);
     return;
   }
@@ -2275,11 +2399,15 @@ const saveMenuItem = async (event) => {
       }
     });
 
-    showMenuItemFeedback(result.message || "Menu item saved successfully.");
     resetMenuItemForm();
     await loadMenuItemsForRestaurant(selectedSlug);
+    const successMessage = result.message || "Menu item saved successfully.";
+    showMenuItemFeedback(successMessage);
+    showAdminToast(successMessage);
   } catch (error) {
-    showMenuItemFeedback(error.message || "Could not save menu item.", "error");
+    const message = error.message || "Could not save menu item.";
+    showMenuItemFeedback(message, "error");
+    showAdminToast(message, "error");
     if (error.details) {
       focusFirstInvalidField(menuItemForm, error.details);
     }
@@ -2297,6 +2425,7 @@ const editCategory = (id) => {
 
   fillCategoryForm(category);
   showCategoryFeedback(`Editing ${category.name}.`);
+  showAdminToast(`Editing ${category.name}.`, "warning");
   categoryForm?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
@@ -2325,13 +2454,17 @@ const deleteCategory = async (id) => {
       }
     });
 
-    showCategoryFeedback(result.message || "Category archived successfully.");
     if (String(categoryIdField?.value || "") === String(category.id)) {
       resetCategoryForm();
     }
     await refreshRestaurantCrudData(selectedSlug);
+    const successMessage = result.message || "Category archived successfully.";
+    showCategoryFeedback(successMessage);
+    showAdminToast(successMessage);
   } catch (error) {
-    showCategoryFeedback(error.message || "Could not delete category.", "error");
+    const message = error.message || "Could not delete category.";
+    showCategoryFeedback(message, "error");
+    showAdminToast(message, "error");
   } finally {
     setCategoryButtonLoading(false);
   }
@@ -2346,6 +2479,7 @@ const editMenuItem = (id) => {
 
   fillMenuItemForm(menuItem);
   showMenuItemFeedback(`Editing ${menuItem.name}.`);
+  showAdminToast(`Editing ${menuItem.name}.`, "warning");
   menuItemForm?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
@@ -2374,13 +2508,17 @@ const deleteMenuItem = async (id) => {
       }
     });
 
-    showMenuItemFeedback(result.message || "Menu item archived successfully.");
     if (String(menuItemIdField?.value || "") === String(menuItem.id)) {
       resetMenuItemForm();
     }
     await loadMenuItemsForRestaurant(selectedSlug);
+    const successMessage = result.message || "Menu item archived successfully.";
+    showMenuItemFeedback(successMessage);
+    showAdminToast(successMessage);
   } catch (error) {
-    showMenuItemFeedback(error.message || "Could not delete menu item.", "error");
+    const message = error.message || "Could not delete menu item.";
+    showMenuItemFeedback(message, "error");
+    showAdminToast(message, "error");
   } finally {
     setMenuItemButtonLoading(false);
   }
