@@ -10,6 +10,7 @@ const sidebarToggle = document.getElementById("sidebarToggle");
 const sidebarOverlay = document.getElementById("sidebarOverlay");
 const logoutButtons = Array.from(document.querySelectorAll('[data-action="logout"]'));
 const ordersTableBody = document.getElementById("ordersTableBody");
+const ordersSourcePill = document.getElementById("ordersSourcePill");
 const menuSnapshotList = document.getElementById("menuSnapshotList");
 const categoryPills = document.getElementById("categoryPills");
 const settingsDetails = document.getElementById("settingsDetails");
@@ -27,6 +28,11 @@ const logoUploadField = document.getElementById("logoUploadField");
 const logoUploadButton = document.getElementById("logoUploadButton");
 const logoPreview = document.getElementById("logoPreview");
 const logoPreviewImage = document.getElementById("logoPreviewImage");
+const faviconPathField = document.getElementById("faviconPath");
+const faviconUploadField = document.getElementById("faviconUploadField");
+const faviconUploadButton = document.getElementById("faviconUploadButton");
+const faviconPreview = document.getElementById("faviconPreview");
+const faviconPreviewImage = document.getElementById("faviconPreviewImage");
 const heroImagePathField = document.getElementById("heroImagePath");
 const heroUploadField = document.getElementById("heroUploadField");
 const heroUploadButton = document.getElementById("heroUploadButton");
@@ -48,6 +54,10 @@ const categoryNameField = document.getElementById("categoryNameField");
 const categorySlugField = document.getElementById("categorySlugField");
 const categoryDescriptionField = document.getElementById("categoryDescriptionField");
 const categoryImageField = document.getElementById("categoryImageField");
+const categoryUploadField = document.getElementById("categoryUploadField");
+const categoryUploadButton = document.getElementById("categoryUploadButton");
+const categoryPreview = document.getElementById("categoryPreview");
+const categoryPreviewImage = document.getElementById("categoryPreviewImage");
 const categorySortField = document.getElementById("categorySortField");
 const categoryStatusField = document.getElementById("categoryStatusField");
 const menuItemTableBody = document.getElementById("menuItemTableBody");
@@ -125,7 +135,55 @@ const menuSnapshot = [
 
 const categories = ["Pizza", "Burger", "Shawarma", "Drinks"];
 
+const imageUploadMaxBytes = 3 * 1024 * 1024;
+const imageUploadMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+const imageUploadExtensions = ["jpg", "jpeg", "png", "webp"];
+const orderItemPlaceholderImage = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="No image available">
+    <defs>
+      <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0%" stop-color="#2a2a2a"/>
+        <stop offset="100%" stop-color="#141414"/>
+      </linearGradient>
+    </defs>
+    <rect width="120" height="120" rx="20" fill="url(#g)"/>
+    <circle cx="60" cy="50" r="18" fill="none" stroke="#ef2b24" stroke-width="5"/>
+    <path d="M42 82h36" stroke="#b7b7b7" stroke-width="6" stroke-linecap="round"/>
+    <path d="M49 45l22 22M71 45L49 67" stroke="#ffd8a1" stroke-width="5" stroke-linecap="round"/>
+  </svg>
+`)}`;
+
 let galleryPreviewObjectUrl = "";
+
+const normalizeAdminImagePath = (value) => {
+  const rawValue = String(value ?? "").trim();
+
+  if (!rawValue) {
+    return "";
+  }
+
+  if (/^(?:https?:)?\/\//i.test(rawValue) || /^(?:data:|blob:)/i.test(rawValue)) {
+    return rawValue;
+  }
+
+  let normalized = rawValue.replace(/\\/g, "/");
+  normalized = normalized.replace(/^\/restaurant_builder\//i, "");
+  normalized = normalized.replace(/^\.\/+/, "").replace(/^\/+/, "");
+
+  for (let index = 0; index < 3; index += 1) {
+    try {
+      const decoded = decodeURIComponent(normalized);
+      if (decoded === normalized) {
+        break;
+      }
+      normalized = decoded;
+    } catch {
+      break;
+    }
+  }
+
+  return normalized;
+};
 
 const settingsFieldNames = [
   "logo",
@@ -180,6 +238,9 @@ let currentCategories = [];
 let currentMenuItems = [];
 let currentDeals = [];
 let currentGallery = [];
+let currentOrders = [];
+let currentOrdersSource = "backend";
+let currentRevenueTotal = 0;
 
 const buildApiUrl = (endpoint, params = {}) => {
   const query = new URLSearchParams();
@@ -290,6 +351,622 @@ const getOrders = () => {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+};
+
+const persistOrders = (orders) => {
+  try {
+    window.localStorage.setItem(ordersKey, JSON.stringify(orders.slice(0, 50)));
+  } catch {
+    // Ignore storage quota issues in demo fallback mode.
+  }
+};
+
+const normalizeOrderStatus = (value) => {
+  const status = String(value ?? "pending").trim().toLowerCase();
+
+  if (status === "completed") {
+    return "delivered";
+  }
+
+  if (["accepted", "preparing"].includes(status)) {
+    return "pending";
+  }
+
+  return ["pending", "delivered", "cancelled"].includes(status) ? status : "pending";
+};
+
+const normalizeOrderItems = (items) => {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .map((item, index) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const foodName = String(
+        item.food_name ?? item.item_name ?? item.name ?? item.title ?? `Item ${index + 1}`
+      ).trim();
+      const foodImage = String(
+        item.food_image ?? item.image ?? item.menu_image ?? item.menu_item_image ?? item.item_image ?? ""
+      ).trim();
+      const quantity = Number.parseInt(String(item.quantity ?? 1), 10);
+
+      return {
+        menu_item_id: item.menu_item_id ?? null,
+        food_name: foodName || `Item ${index + 1}`,
+        food_image: foodImage,
+        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+        unit_price: Number.isFinite(Number(item.unit_price)) ? Number(item.unit_price) : null
+      };
+    })
+    .filter(Boolean);
+};
+
+const normalizePaymentStatus = (value) => {
+  const status = String(value ?? "unpaid").trim().toLowerCase();
+  return ["unpaid", "paid", "partial", "cash_received", "refunded"].includes(status)
+    ? status
+    : "unpaid";
+};
+
+const moneyValue = (value) => {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) {
+    return null;
+  }
+
+  return Math.round(number * 100) / 100;
+};
+
+const isOrderCancelled = (order) => String(order?.status ?? order?.order_status ?? "").trim().toLowerCase() === "cancelled";
+
+const isOrderCashReceived = (order) => {
+  const paymentStatus = normalizePaymentStatus(order?.payment_status);
+  return paymentStatus === "cash_received"
+    || Boolean(order?.cash_received_at)
+    || Boolean(order?.revenue_posted_at);
+};
+
+const calculateOrderItemAmount = (item) => {
+  const quantity = Number.parseInt(String(item?.quantity ?? 1), 10);
+  const safeQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+  const unitPrice = moneyValue(item?.unit_price);
+  const menuItemPrice = moneyValue(item?.menu_item_price);
+  const fallbackPrice = unitPrice ?? menuItemPrice;
+
+  if (fallbackPrice !== null && fallbackPrice > 0) {
+    return Math.round((safeQuantity * fallbackPrice) * 100) / 100;
+  }
+
+  const totalPrice = moneyValue(item?.total_price);
+  return totalPrice !== null && totalPrice > 0 ? totalPrice : null;
+};
+
+const calculateOrderTotal = (order) => {
+  const itemAmounts = Array.isArray(order?.items)
+    ? order.items.map((item) => calculateOrderItemAmount(item)).filter((value) => value !== null)
+    : [];
+
+  if (itemAmounts.length > 0) {
+    return Math.round(itemAmounts.reduce((sum, value) => sum + value, 0) * 100) / 100;
+  }
+
+  const fallbackTotal = moneyValue(order?.total_amount);
+  if (fallbackTotal !== null && fallbackTotal > 0) {
+    return fallbackTotal;
+  }
+
+  return moneyValue(order?.revenue_amount);
+};
+
+const computeRevenueTotal = (orders) => (Array.isArray(orders) ? orders : []).reduce((sum, order) => {
+  if (!isOrderCashReceived(order)) {
+    return sum;
+  }
+
+  const amount = moneyValue(order?.revenue_amount)
+    ?? calculateOrderTotal(order)
+    ?? moneyValue(order?.total_amount)
+    ?? 0;
+
+  return sum + amount;
+}, 0);
+
+const normalizeOrderRecord = (order, index = 0) => {
+  if (!order || typeof order !== "object") {
+    return null;
+  }
+
+  const items = normalizeOrderItems(order.items ?? order.order_items ?? []);
+  const primaryItem = items[0] ?? null;
+  const status = normalizeOrderStatus(order.status ?? order.order_status);
+  const paymentStatus = normalizePaymentStatus(order.payment_status);
+  const foodItem = String(order.food_item ?? primaryItem?.food_name ?? `Order #${index + 1}`).trim();
+  const foodImage = String(order.food_image ?? primaryItem?.food_image ?? "").trim();
+  const orderTotal = calculateOrderTotal({
+    ...order,
+    items,
+    total_amount: order.total_amount
+  });
+
+  return {
+    ...order,
+    id: order.id,
+    customer_name: String(order.customer_name ?? "Guest").trim() || "Guest",
+    customer_phone: String(order.customer_phone ?? order.phone ?? "").trim(),
+    phone: String(order.phone ?? order.customer_phone ?? "").trim(),
+    customer_address: String(order.customer_address ?? order.address ?? "").trim(),
+    address: String(order.address ?? order.customer_address ?? "").trim(),
+    message: String(order.message ?? order.note ?? "").trim(),
+    note: String(order.note ?? order.message ?? "").trim(),
+    food_item: foodItem,
+    food_image: foodImage,
+    payment_status: paymentStatus,
+    cash_received_at: order.cash_received_at ?? null,
+    revenue_posted_at: order.revenue_posted_at ?? null,
+    revenue_amount: moneyValue(order.revenue_amount),
+    order_total: orderTotal,
+    status,
+    order_status: status,
+    items
+  };
+};
+
+const normalizeOrderList = (orders) => Array.isArray(orders)
+  ? orders.map((order, index) => normalizeOrderRecord(order, index)).filter(Boolean)
+  : [];
+
+const getStoredOrders = () => normalizeOrderList(getOrders());
+
+const updateOrdersSourcePill = (source) => {
+  if (!ordersSourcePill) {
+    return;
+  }
+
+  const resolvedSource = source === "localStorage" ? "localStorage" : "backend";
+  ordersSourcePill.classList.toggle("status-pill--accent", resolvedSource === "localStorage");
+  ordersSourcePill.classList.toggle("status-pill--live", resolvedSource === "backend");
+  ordersSourcePill.textContent = resolvedSource === "localStorage"
+    ? "Demo localStorage fallback"
+    : "Live backend orders";
+};
+
+const syncOrdersFromStorage = () => {
+  const storedOrders = getStoredOrders();
+  currentOrders = storedOrders;
+  currentOrdersSource = storedOrders.length ? "localStorage" : "backend";
+  currentRevenueTotal = computeRevenueTotal(storedOrders);
+  updateOrdersSourcePill(currentOrdersSource);
+  return storedOrders;
+};
+
+const refreshOrderStats = () => {
+  if (statOrders) {
+    statOrders.textContent = String(currentOrders.length);
+  }
+  if (statRevenue) {
+    statRevenue.textContent = formatCurrency(currentRevenueTotal);
+  }
+};
+
+const setRevenueTotal = (value) => {
+  currentRevenueTotal = Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+  refreshOrderStats();
+};
+
+const updateLocalOrderStatus = (orderId, status) => {
+  const storedOrders = getStoredOrders();
+  let updated = false;
+
+  const nextOrders = storedOrders.map((order) => {
+    if (String(order.id) !== String(orderId)) {
+      return order;
+    }
+
+    updated = true;
+    return {
+      ...order,
+      status,
+      order_status: status,
+      updated_at: new Date().toISOString()
+    };
+  });
+
+  if (updated) {
+    persistOrders(nextOrders);
+    currentOrders = nextOrders;
+    currentOrdersSource = "localStorage";
+    updateOrdersSourcePill(currentOrdersSource);
+    renderOrders();
+  }
+
+  return updated;
+};
+
+const updateLocalOrderCashReceived = (orderId) => {
+  const storedOrders = getStoredOrders();
+  let updated = false;
+
+  const nextOrders = storedOrders.map((order) => {
+    if (String(order.id) !== String(orderId)) {
+      return order;
+    }
+
+    const orderTotal = calculateOrderTotal(order);
+    if (orderTotal === null || orderTotal <= 0) {
+      return order;
+    }
+
+    updated = true;
+    return {
+      ...order,
+      payment_status: "cash_received",
+      cash_received_at: order.cash_received_at || new Date().toISOString(),
+      revenue_posted_at: order.revenue_posted_at || new Date().toISOString(),
+      revenue_amount: order.revenue_amount || orderTotal,
+      updated_at: new Date().toISOString()
+    };
+  });
+
+  if (updated) {
+    persistOrders(nextOrders);
+    currentOrders = nextOrders;
+    currentOrdersSource = "localStorage";
+    currentRevenueTotal = computeRevenueTotal(nextOrders);
+    updateOrdersSourcePill(currentOrdersSource);
+    renderOrders();
+  }
+
+  return updated;
+};
+
+const renderOrderItems = (items) => {
+  const itemList = document.createElement("div");
+  itemList.className = "order-items-list";
+
+  items.forEach((item, index) => {
+    const row = document.createElement("div");
+    row.className = "order-item-row";
+
+    const indexBadge = document.createElement("span");
+    indexBadge.className = "order-item-index";
+    indexBadge.textContent = `#${index + 1}`;
+
+    const thumb = document.createElement("div");
+    thumb.className = "order-item-thumb";
+    const image = document.createElement("img");
+    image.className = "order-item-thumb-img";
+    image.loading = "lazy";
+    image.decoding = "async";
+    image.alt = item.food_name || `Item ${index + 1}`;
+    image.src = orderItemPlaceholderImage;
+
+    const resolvedImagePath = resolveAdminImageUrl(resolveOrderItemImagePath(item));
+    if (resolvedImagePath && resolvedImagePath !== orderItemPlaceholderImage) {
+      const preloadImage = new Image();
+      preloadImage.decoding = "async";
+      preloadImage.onload = () => {
+        image.src = resolvedImagePath;
+        image.alt = item.food_name || `Item ${index + 1}`;
+        thumb.classList.remove("order-item-thumb--placeholder");
+      };
+      preloadImage.onerror = () => {
+        thumb.classList.add("order-item-thumb--placeholder");
+      };
+      preloadImage.src = resolvedImagePath;
+    } else {
+      thumb.classList.add("order-item-thumb--placeholder");
+      image.alt = "No image available";
+    }
+    thumb.appendChild(image);
+
+    const name = document.createElement("span");
+    name.className = "order-item-name";
+    name.textContent = item.food_name || `Item ${index + 1}`;
+
+    const quantity = document.createElement("span");
+    quantity.className = "order-item-qty";
+    quantity.textContent = `× ${Number(item.quantity || 1)}`;
+
+    row.append(thumb, indexBadge, name, quantity);
+    itemList.appendChild(row);
+  });
+
+  return itemList;
+};
+
+const renderOrderStatusControl = (order) => {
+  const stack = document.createElement("div");
+  stack.className = "order-status-stack";
+
+  const badge = document.createElement("span");
+  badge.className = `status-badge status-badge--${order.status || "pending"}`;
+  badge.textContent = String(order.status || "pending")
+    .replace(/^\w/, (letter) => letter.toUpperCase());
+
+  const select = document.createElement("select");
+  select.className = "field-control order-status-control";
+  select.dataset.orderId = String(order.id);
+  select.dataset.orderStatusSelect = "1";
+
+  [
+    { value: "pending", label: "Pending" },
+    { value: "delivered", label: "Delivered" },
+    { value: "cancelled", label: "Cancelled" }
+  ].forEach((option) => {
+    const element = document.createElement("option");
+    element.value = option.value;
+    element.textContent = option.label;
+    select.appendChild(element);
+  });
+
+  select.value = ["pending", "delivered", "cancelled"].includes(order.status) ? order.status : "pending";
+  stack.append(badge, select);
+  return stack;
+};
+
+const renderOrderPaymentControl = (order) => {
+  const stack = document.createElement("div");
+  stack.className = "order-payment-stack";
+
+  const orderTotal = calculateOrderTotal(order);
+  const totalBadge = document.createElement("span");
+  totalBadge.className = `order-total${orderTotal === null ? " order-total--missing" : ""}`;
+  totalBadge.textContent = orderTotal === null ? "Amount missing" : `Total ${formatCurrency(orderTotal)}`;
+
+  const paymentStatus = isOrderCashReceived(order)
+    ? "cash_received"
+    : normalizePaymentStatus(order.payment_status);
+  const paymentBadgeState = paymentStatus === "cash_received"
+    ? "cash-received"
+    : paymentStatus === "refunded"
+      ? "refunded"
+      : isOrderCancelled(order)
+        ? "cancelled"
+      : "unpaid";
+
+  const badge = document.createElement("span");
+  badge.className = `payment-badge payment-badge--${paymentBadgeState}`;
+  badge.textContent = isOrderCancelled(order)
+    ? "Cancelled"
+    : paymentStatus === "cash_received"
+    ? "Cash received"
+    : paymentStatus === "refunded"
+      ? "Refunded"
+      : "Unpaid";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "btn btn--ghost btn--compact cash-received-btn";
+  button.dataset.orderId = String(order.id);
+  button.dataset.orderCashReceived = "1";
+  button.textContent = "Cash Received";
+
+  if (isOrderCancelled(order)) {
+    button.disabled = true;
+    button.textContent = "Cancelled";
+    button.classList.add("cash-received-btn--done");
+  } else if (paymentStatus === "cash_received") {
+    button.disabled = true;
+    button.classList.add("cash-received-btn--done");
+  } else if (orderTotal === null || orderTotal <= 0) {
+    button.disabled = true;
+    button.title = "Amount missing";
+  }
+
+  stack.append(totalBadge, badge, button);
+  return stack;
+};
+
+const loadRevenueSummaryForRestaurant = async (slug) => {
+  const resolvedSlug = slug || "demo-pizza-house";
+
+  if (currentOrdersSource === "localStorage") {
+    setRevenueTotal(computeRevenueTotal(currentOrders));
+    return currentRevenueTotal;
+  }
+
+  try {
+    const result = await fetchJson("orders.php", {
+      params: { restaurant: resolvedSlug, action: "summary" },
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
+    });
+
+    const revenueTotal = Number(result.data?.revenue_total ?? result.revenue_total ?? 0);
+    setRevenueTotal(revenueTotal);
+    return currentRevenueTotal;
+  } catch {
+    setRevenueTotal(computeRevenueTotal(currentOrders));
+    return currentRevenueTotal;
+  }
+};
+
+const loadOrdersForRestaurant = async (slug) => {
+  const resolvedSlug = slug || "demo-pizza-house";
+
+  try {
+    const result = await fetchJson("orders.php", {
+      params: { restaurant: resolvedSlug },
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
+    });
+
+    const backendOrders = normalizeOrderList(Array.isArray(result.data) ? result.data : (Array.isArray(result.orders) ? result.orders : []));
+    if (backendOrders.length > 0) {
+      currentOrders = backendOrders;
+      currentOrdersSource = "backend";
+    } else {
+      const fallbackOrders = getStoredOrders();
+      currentOrders = fallbackOrders;
+      currentOrdersSource = fallbackOrders.length ? "localStorage" : "backend";
+    }
+    updateOrdersSourcePill(currentOrdersSource);
+    renderOrders();
+    await loadRevenueSummaryForRestaurant(resolvedSlug);
+  } catch (error) {
+    const fallbackOrders = getStoredOrders();
+    currentOrders = fallbackOrders;
+    currentOrdersSource = fallbackOrders.length ? "localStorage" : "backend";
+    currentRevenueTotal = computeRevenueTotal(currentOrders);
+    updateOrdersSourcePill(currentOrdersSource);
+    renderOrders();
+    console.warn("Orders fallback:", error.message);
+  }
+};
+
+const updateOrderStatus = async (orderId, nextStatus, selectElement) => {
+  const normalizedStatus = normalizeOrderStatus(nextStatus);
+  const existingOrder = (Array.isArray(currentOrders) ? currentOrders : []).find((order) => String(order.id) === String(orderId));
+
+  if (!existingOrder) {
+    return;
+  }
+
+  if (currentOrdersSource === "localStorage") {
+    if (selectElement) {
+      selectElement.disabled = true;
+    }
+
+    const updated = updateLocalOrderStatus(orderId, normalizedStatus);
+    if (!updated) {
+      showAdminToast("Could not update the demo order status.", "error");
+    } else {
+      showAdminToast(`Order marked as ${normalizedStatus}.`);
+    }
+
+    if (selectElement) {
+      selectElement.disabled = false;
+    }
+    return;
+  }
+
+  if (selectElement) {
+    selectElement.disabled = true;
+  }
+
+  try {
+    const result = await fetchJson("orders.php", {
+      method: "PUT",
+      params: { restaurant: restaurantSelect?.value || currentRestaurant?.slug || "demo-pizza-house" },
+      body: {
+        action: "update_status",
+        id: orderId,
+        status: normalizedStatus
+      },
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
+    });
+
+    const updatedOrder = normalizeOrderRecord(result.data || result.order || {
+      ...existingOrder,
+      status: result.status || normalizedStatus,
+      order_status: result.status || normalizedStatus
+    });
+
+    currentOrders = currentOrders.map((order) => (
+      String(order.id) === String(updatedOrder.id) ? updatedOrder : order
+    ));
+    currentOrdersSource = "backend";
+    updateOrdersSourcePill(currentOrdersSource);
+    renderOrders();
+    showAdminToast(result.message || `Order marked as ${normalizedStatus}.`);
+  } catch (error) {
+    if (selectElement) {
+      selectElement.value = existingOrder.status || "pending";
+    }
+    showAdminToast(error.message || "Could not update order status.", "error");
+  } finally {
+    if (selectElement) {
+      selectElement.disabled = false;
+    }
+  }
+};
+
+const updateOrderCashReceived = async (orderId, buttonElement) => {
+  const existingOrder = (Array.isArray(currentOrders) ? currentOrders : []).find((order) => String(order.id) === String(orderId));
+
+  if (!existingOrder) {
+    return;
+  }
+
+  if (isOrderCancelled(existingOrder)) {
+    showAdminToast("Cancelled orders cannot be marked as cash received.", "error");
+    return;
+  }
+
+  const orderTotal = calculateOrderTotal(existingOrder);
+  if (orderTotal === null || orderTotal <= 0) {
+    showAdminToast("Order amount is missing.", "error");
+    return;
+  }
+
+  if (currentOrdersSource === "localStorage") {
+    if (buttonElement) {
+      buttonElement.disabled = true;
+    }
+
+    const updated = updateLocalOrderCashReceived(orderId);
+    if (!updated) {
+      showAdminToast("Could not record cash received for the demo order.", "error");
+    } else {
+      showAdminToast("Cash received recorded successfully.");
+    }
+
+    if (buttonElement) {
+      buttonElement.disabled = false;
+    }
+    return;
+  }
+
+  if (buttonElement) {
+    buttonElement.disabled = true;
+  }
+
+  try {
+    const result = await fetchJson("orders.php", {
+      method: "PUT",
+      params: {
+        restaurant: restaurantSelect?.value || currentRestaurant?.slug || "demo-pizza-house"
+      },
+      body: {
+        action: "cash_received",
+        id: orderId
+      },
+      headers: {
+        "X-Admin-Dev-Token": adminDevToken
+      }
+    });
+
+    const updatedOrder = normalizeOrderRecord(result.data || result.order || {
+      ...existingOrder,
+      payment_status: "cash_received",
+      cash_received_at: existingOrder.cash_received_at || new Date().toISOString(),
+      revenue_posted_at: existingOrder.revenue_posted_at || new Date().toISOString(),
+      revenue_amount: result.revenue_total || orderTotal
+    });
+
+    currentOrders = currentOrders.map((order) => (
+      String(order.id) === String(updatedOrder.id) ? updatedOrder : order
+    ));
+    currentOrdersSource = "backend";
+    updateOrdersSourcePill(currentOrdersSource);
+    setRevenueTotal(result.revenue_total ?? computeRevenueTotal(currentOrders));
+    renderOrders();
+    showAdminToast(result.message || "Cash received recorded successfully.");
+  } catch (error) {
+    showAdminToast(error.message || "Could not record cash received.", "error");
+  } finally {
+    if (buttonElement) {
+      buttonElement.disabled = false;
+    }
   }
 };
 
@@ -453,35 +1130,62 @@ const isValidImagePathOrUrl = (value) => {
   }
 
   const allowedExtensions = ["jpg", "jpeg", "png", "webp"];
-  let pathPart = normalized;
 
-  if (/^[a-z][a-z0-9+.-]*:/i.test(normalized)) {
-    let parsedUrl;
-    try {
-      parsedUrl = new URL(normalized);
-    } catch {
-      return false;
-    }
+  if (normalized.startsWith("/")) {
+    return false;
+  }
 
-    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-      return false;
-    }
-
-    pathPart = parsedUrl.pathname || "";
-  } else {
-    if (normalized.startsWith("/")) {
-      return false;
-    }
-
-    pathPart = normalized.split(/[?#]/)[0];
-
-    if (!/^(?:images\/|uploads\/restaurants\/)/i.test(pathPart)) {
-      return false;
-    }
+  const pathPart = normalized.split(/[?#]/)[0];
+  if (!/^(?:images\/|uploads\/restaurants\/)/i.test(pathPart)) {
+    return false;
   }
 
   const extension = String(pathPart.split(/[?#]/)[0].split(".").pop() || "").toLowerCase();
   return allowedExtensions.includes(extension);
+};
+
+const resolveAdminImageUrl = (value) => {
+  const rawValue = normalizeAdminImagePath(value);
+
+  if (!rawValue) {
+    return orderItemPlaceholderImage;
+  }
+
+  if (/^(?:https?:)?\/\//i.test(rawValue) || /^(?:data:|blob:)/i.test(rawValue)) {
+    return rawValue;
+  }
+
+  if (/(^|[\\/])\.\.([\\/]|$)/.test(rawValue)) {
+    return orderItemPlaceholderImage;
+  }
+
+  const normalizedPath = `/restaurant_builder/${rawValue.replace(/^\/+/, "")}`;
+
+  try {
+    return new URL(normalizedPath, window.location.origin).href;
+  } catch {
+    return orderItemPlaceholderImage;
+  }
+};
+
+const resolveOrderItemImagePath = (item) => {
+  const menuItems = Array.isArray(currentMenuItems) ? currentMenuItems : [];
+  const menuMatch = menuItems.find((menuItem) => {
+    if (item?.menu_item_id !== null && item?.menu_item_id !== undefined) {
+      return String(menuItem.id) === String(item.menu_item_id);
+    }
+
+    const itemName = String(item?.food_name ?? "").trim().toLowerCase();
+    return itemName !== "" && String(menuItem.name ?? "").trim().toLowerCase() === itemName;
+  }) || null;
+
+  return item?.food_image
+    || item?.image
+    || item?.menu_image
+    || item?.menu_item_image
+    || item?.item_image
+    || menuMatch?.image
+    || "";
 };
 
 const renderOrders = () => {
@@ -489,7 +1193,7 @@ const renderOrders = () => {
     return;
   }
 
-  const orders = getOrders();
+  const orders = Array.isArray(currentOrders) ? currentOrders : [];
   if (statOrders) {
     statOrders.textContent = String(orders.length);
   }
@@ -500,16 +1204,19 @@ const renderOrders = () => {
     statDeals.textContent = String(currentDeals.length);
   }
   if (statRevenue) {
-    statRevenue.textContent = `$${(orders.length * 18.5).toFixed(0)}`;
+    statRevenue.textContent = formatCurrency(currentRevenueTotal);
   }
+  updateOrdersSourcePill(currentOrdersSource);
 
   ordersTableBody.innerHTML = "";
 
   if (!orders.length) {
     const emptyRow = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 6;
-    cell.textContent = "No local orders saved yet. Submit the public order form to see demo data here.";
+    cell.colSpan = 7;
+    cell.textContent = currentOrdersSource === "localStorage"
+      ? "No demo orders saved yet. Submit the public order form to see local fallback data here."
+      : "No orders found for this restaurant yet.";
     emptyRow.appendChild(cell);
     ordersTableBody.appendChild(emptyRow);
     return;
@@ -517,29 +1224,38 @@ const renderOrders = () => {
 
   orders.slice(0, 12).forEach((order) => {
     const row = document.createElement("tr");
-    const cells = [
-      order.customer_name || "Guest",
-      order.food_item || "-",
-      order.phone || "-",
-      order.message || "-",
-      order.status || "pending",
-      formatDate(order.created_at)
-    ];
+    const customerCell = document.createElement("td");
+    customerCell.innerHTML = `
+      <strong>${escapeHTML(order.customer_name || "Guest")}</strong>
+      ${order.address ? `<span class="order-meta">${escapeHTML(order.address)}</span>` : ""}
+    `;
 
-    cells.forEach((value, index) => {
-      const cell = document.createElement("td");
+    const foodCell = document.createElement("td");
+    const displayItems = Array.isArray(order.items) && order.items.length > 0
+      ? order.items
+      : [{
+          food_name: order.food_item || "-",
+          food_image: order.food_image || "",
+          quantity: Number(order.quantity || order.item_quantity || 1)
+        }];
+    foodCell.appendChild(renderOrderItems(displayItems));
 
-      if (index === 4) {
-        const badge = document.createElement("span");
-        badge.className = `status-badge status-badge--${String(value).toLowerCase()}`;
-        badge.textContent = String(value);
-        cell.appendChild(badge);
-      } else {
-        cell.textContent = String(value);
-      }
+    const phoneCell = document.createElement("td");
+    phoneCell.textContent = order.phone || order.customer_phone || "-";
 
-      row.appendChild(cell);
-    });
+    const messageCell = document.createElement("td");
+    messageCell.textContent = order.message || order.note || "-";
+
+    const statusCell = document.createElement("td");
+    statusCell.appendChild(renderOrderStatusControl(order));
+
+    const paymentCell = document.createElement("td");
+    paymentCell.appendChild(renderOrderPaymentControl(order));
+
+    const timeCell = document.createElement("td");
+    timeCell.textContent = formatDate(order.created_at);
+
+    row.append(customerCell, foodCell, phoneCell, messageCell, statusCell, paymentCell, timeCell);
 
     ordersTableBody.appendChild(row);
   });
@@ -672,6 +1388,9 @@ const fillSettingsForm = (settings) => {
   if (logoUploadField) {
     logoUploadField.value = "";
   }
+  if (faviconUploadField) {
+    faviconUploadField.value = "";
+  }
   if (heroUploadField) {
     heroUploadField.value = "";
   }
@@ -680,6 +1399,7 @@ const fillSettingsForm = (settings) => {
   }
 
   updateLogoPreview(settings?.logo ?? "");
+  updateFaviconPreview(settings?.favicon ?? "");
   updateHeroPreview(settings?.hero_image ?? "");
   updateAboutPreview(settings?.about_image ?? "");
 };
@@ -711,7 +1431,7 @@ const validateSettingsPayload = (payload) => {
     }
 
     if (!validateSettingsImageValue(value)) {
-      errors[fieldName] = `${label} must be a valid image path or URL.`;
+      errors[fieldName] = `${label} must be a valid uploaded image path.`;
     }
   };
 
@@ -847,6 +1567,7 @@ const loadRestaurants = async () => {
     await loadMenuItemsForRestaurant(selectedSlug);
     await loadDealsForRestaurant(selectedSlug);
     await loadGalleryForRestaurant(selectedSlug);
+    await loadOrdersForRestaurant(selectedSlug);
   } catch (error) {
     loadedRestaurants = [{ id: 1, name: "Demo Pizza House", slug: "demo-pizza-house", business_type: "pizza" }];
     populateRestaurantSelect(loadedRestaurants, preferredSlug);
@@ -855,6 +1576,7 @@ const loadRestaurants = async () => {
     await loadMenuItemsForRestaurant(restaurantSelect.value || "demo-pizza-house");
     await loadDealsForRestaurant(restaurantSelect.value || "demo-pizza-house");
     await loadGalleryForRestaurant(restaurantSelect.value || "demo-pizza-house");
+    await loadOrdersForRestaurant(restaurantSelect.value || "demo-pizza-house");
     showSettingsFeedback(`Loaded fallback restaurant list because the API was unavailable.`, "error");
     console.warn("Restaurant list fallback:", error.message);
   }
@@ -868,20 +1590,50 @@ const saveSettings = async (event) => {
   }
 
   const selectedSlug = restaurantSelect.value || "demo-pizza-house";
-  const payload = collectSettingsPayload();
-  const errors = validateSettingsPayload(payload);
-
-  if (Object.keys(errors).length > 0) {
-    showSettingsFeedback("Validation error. Check the highlighted fields.", "error");
-    showAdminToast("Validation error. Check the highlighted fields.", "warning");
-    focusFirstSettingsField(errors);
-    return;
-  }
 
   setButtonLoading(true);
-  showSettingsFeedback("Saving settings...");
 
   try {
+    if (logoUploadField?.files?.[0]) {
+      const uploadedPath = await uploadLogoImage({ showToast: false });
+      if (!uploadedPath) {
+        return;
+      }
+    }
+
+    if (faviconUploadField?.files?.[0]) {
+      const uploadedPath = await uploadFaviconImage({ showToast: false });
+      if (!uploadedPath) {
+        return;
+      }
+    }
+
+    if (heroUploadField?.files?.[0]) {
+      const uploadedPath = await uploadHeroImage({ showToast: false });
+      if (!uploadedPath) {
+        return;
+      }
+    }
+
+    if (aboutUploadField?.files?.[0]) {
+      const uploadedPath = await uploadAboutImage({ showToast: false });
+      if (!uploadedPath) {
+        return;
+      }
+    }
+
+    const payload = collectSettingsPayload();
+    const errors = validateSettingsPayload(payload);
+
+    if (Object.keys(errors).length > 0) {
+      showSettingsFeedback("Validation error. Check the highlighted fields.", "error");
+      showAdminToast("Validation error. Check the highlighted fields.", "warning");
+      focusFirstSettingsField(errors);
+      return;
+    }
+
+    showSettingsFeedback("Saving settings...");
+
     const response = await fetch(`${apiBase}/settings.php?restaurant=${encodeURIComponent(selectedSlug)}`, {
       method: "PUT",
       headers: {
@@ -976,6 +1728,25 @@ const focusFirstInvalidField = (form, errors) => {
   }
 };
 
+const summarizeValidationErrors = (errors, fallbackMessage = "Validation error. Check the highlighted fields.") => {
+  if (!errors || typeof errors !== "object") {
+    return fallbackMessage;
+  }
+
+  const messages = Object.values(errors)
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  if (!messages.length) {
+    return fallbackMessage;
+  }
+
+  const uniqueMessages = [...new Set(messages)];
+  return uniqueMessages.length === 1
+    ? `Please fix: ${uniqueMessages[0]}`
+    : `Please fix: ${uniqueMessages.join(", ")}`;
+};
+
 const getCategoryFormPayload = () => ({
   id: String(categoryIdField?.value || "").trim(),
   name: String(categoryNameField?.value || "").trim(),
@@ -1001,6 +1772,8 @@ const validateCategoryFormPayload = (payload) => {
 
   if (payload.image.length > 255) {
     errors.image = "Image path must be 255 characters or fewer.";
+  } else if (payload.image && !isValidImagePathOrUrl(payload.image)) {
+    errors.image = "Image must be a valid uploaded image path.";
   }
 
   if (!isNonNegativeInteger(payload.sort_order)) {
@@ -1024,6 +1797,10 @@ const fillCategoryForm = (category = {}) => {
   categorySlugField.value = category.slug || "";
   categoryDescriptionField.value = category.description || "";
   categoryImageField.value = category.image || "";
+  if (categoryUploadField) {
+    categoryUploadField.value = "";
+  }
+  updateCategoryPreview(category.image || "");
   categorySortField.value = category.sort_order ?? 0;
   categoryStatusField.value = category.status || "active";
 
@@ -1040,6 +1817,10 @@ const resetCategoryForm = () => {
   if (categorySortField) {
     categorySortField.value = 0;
   }
+  if (categoryUploadField) {
+    categoryUploadField.value = "";
+  }
+  updateCategoryPreview("");
   if (categoryStatusField) {
     categoryStatusField.value = "active";
   }
@@ -1158,7 +1939,7 @@ const validateMenuItemFormPayload = (payload) => {
   } else if (!payload.image) {
     errors.image = "Image path is required.";
   } else if (!isValidImagePathOrUrl(payload.image)) {
-    errors.image = "Image must be a valid image path or URL.";
+    errors.image = "Image must be a valid uploaded image path.";
   }
 
   if (payload.badge_text.length > 100) {
@@ -1194,6 +1975,9 @@ const fillMenuItemForm = (menuItem = {}) => {
   menuItemPriceField.value = menuItem.price ?? "";
   menuItemDiscountField.value = menuItem.discount_price ?? "";
   menuItemImageField.value = menuItem.image || "";
+  if (menuItemUploadField) {
+    menuItemUploadField.value = "";
+  }
   updateMenuItemPreview(menuItem.image || "");
   menuItemBadgeField.value = menuItem.badge_text || "";
   menuItemFeaturedField.checked = Number(menuItem.is_featured || 0) === 1;
@@ -1330,7 +2114,7 @@ const validateDealFormPayload = (payload) => {
   } else if (payload.image.length > 255) {
     errors.image = "Image path must be 255 characters or fewer.";
   } else if (!isValidImagePathOrUrl(payload.image)) {
-    errors.image = "Image must be a valid image path or URL.";
+    errors.image = "Image must be a valid uploaded image path.";
   }
 
   if (!isNonNegativeInteger(payload.sort_order)) {
@@ -1356,6 +2140,9 @@ const fillDealForm = (deal = {}) => {
   dealRegularPriceField.value = deal.regular_price ?? "";
   dealPriceField.value = deal.deal_price ?? "";
   dealImageField.value = deal.image || "";
+  if (dealUploadField) {
+    dealUploadField.value = "";
+  }
   updateDealPreview(deal.image || "");
   dealStartsAtField.value = normalizeDateTimeLocalValue(deal.starts_at || "");
   dealEndsAtField.value = normalizeDateTimeLocalValue(deal.ends_at || "");
@@ -1460,20 +2247,29 @@ const saveDeal = async (event) => {
   }
 
   const selectedSlug = restaurantSelect.value || "demo-pizza-house";
-  const payload = getDealFormPayload();
-  const errors = validateDealFormPayload(payload);
-
-  if (Object.keys(errors).length > 0) {
-    showDealFeedback("Validation error. Check the highlighted fields.", "error");
-    showAdminToast("Validation error. Check the highlighted fields.", "warning");
-    focusFirstInvalidField(dealForm, errors);
-    return;
-  }
 
   setDealButtonLoading(true);
-  showDealFeedback("Saving deal...");
 
   try {
+    if (dealUploadField?.files?.[0]) {
+      const uploadedPath = await uploadDealImage({ showToast: false });
+      if (!uploadedPath) {
+        return;
+      }
+    }
+
+    const payload = getDealFormPayload();
+    const errors = validateDealFormPayload(payload);
+
+    if (Object.keys(errors).length > 0) {
+      showDealFeedback("Validation error. Check the highlighted fields.", "error");
+      showAdminToast("Validation error. Check the highlighted fields.", "warning");
+      focusFirstInvalidField(dealForm, errors);
+      return;
+    }
+
+    showDealFeedback("Saving deal...");
+
     const method = payload.id ? "PUT" : "POST";
     const result = await fetchJson("deals.php", {
       method,
@@ -1677,6 +2473,77 @@ const updateDealPreview = (path) => {
   updateImagePreview(path, dealPreview, dealPreviewImage);
 };
 
+const updateCategoryPreview = (path) => {
+  updateImagePreview(path, categoryPreview, categoryPreviewImage);
+};
+
+const updateFaviconPreview = (path) => {
+  updateSettingsImagePreview(path, faviconPreview, faviconPreviewImage, "contain");
+};
+
+const previewImageFile = (file, previewUpdater) => {
+  if (!(file instanceof File)) {
+    previewUpdater("");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    previewUpdater(String(reader.result || ""));
+  };
+  reader.onerror = () => {
+    previewUpdater("");
+  };
+  reader.readAsDataURL(file);
+};
+
+const validateSelectedImageFile = (file) => {
+  if (!(file instanceof File) || file.size < 1) {
+    return "Please select an image before saving.";
+  }
+
+  const fileName = String(file.name || "");
+  const extension = fileName.includes(".") ? fileName.split(".").pop().toLowerCase() : "";
+
+  if (file.size > imageUploadMaxBytes) {
+    return "Image must be 3 MB or smaller.";
+  }
+
+  if (file.type && !imageUploadMimeTypes.includes(file.type)) {
+    return "Only JPG, PNG, and WebP images are allowed.";
+  }
+
+  if (!imageUploadExtensions.includes(extension)) {
+    return "Only JPG, PNG, and WebP images are allowed.";
+  }
+
+  return "";
+};
+
+const handleImageFileSelection = (fileInput, previewUpdater, fallbackValue = "", showFeedback = () => {}) => {
+  const selectedFile = fileInput?.files?.[0] || null;
+
+  if (!selectedFile) {
+    previewUpdater(fallbackValue);
+    showFeedback("");
+    return;
+  }
+
+  const validationMessage = validateSelectedImageFile(selectedFile);
+  if (validationMessage) {
+    showFeedback(validationMessage, "error");
+    showAdminToast(validationMessage, "error");
+    if (fileInput) {
+      fileInput.value = "";
+    }
+    previewUpdater(fallbackValue);
+    return;
+  }
+
+  previewImageFile(selectedFile, previewUpdater);
+  showFeedback("");
+};
+
 const setUploadButtonLoading = (button, loading) => {
   if (!button) {
     return;
@@ -1717,7 +2584,7 @@ const uploadRestaurantImage = async ({
   showFeedback,
   purpose,
   slot = "",
-  maxBytes = 3 * 1024 * 1024,
+  maxBytes = imageUploadMaxBytes,
   showToast = true
 }) => {
   const reportError = (message) => {
@@ -1737,8 +2604,7 @@ const uploadRestaurantImage = async ({
     return reportError("Please select an image to upload.");
   }
 
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-  if (file.type && !allowedTypes.includes(file.type)) {
+  if (file.type && !imageUploadMimeTypes.includes(file.type)) {
     return reportError("Only JPG, PNG, and WebP images are allowed.");
   }
 
@@ -1780,6 +2646,9 @@ const uploadRestaurantImage = async ({
 
     imageInput.value = result.data.path;
     previewUpdater(result.data.path);
+    if (fileInput) {
+      fileInput.value = "";
+    }
     showFeedback(result.message || "Image uploaded successfully.");
     if (showToast) {
       showAdminToast(result.message || "Image uploaded successfully.");
@@ -1798,20 +2667,52 @@ const uploadRestaurantImage = async ({
 };
 
 const createSettingsImageUploadHandler = (slot, fileInput, imageInput, previewUpdater, button) => {
-  return async () => uploadRestaurantImage({
+  return async (options = {}) => uploadRestaurantImage({
     fileInput,
     imageInput,
     previewUpdater,
     setLoading: (loading) => setUploadButtonLoading(button, loading),
     showFeedback: showSettingsFeedback,
     purpose: "settings",
-    slot
+    slot,
+    showToast: options.showToast ?? true
   });
 };
 
 const uploadLogoImage = createSettingsImageUploadHandler("logo", logoUploadField, logoPathField, updateLogoPreview, logoUploadButton);
+const uploadFaviconImage = createSettingsImageUploadHandler("favicon", faviconUploadField, faviconPathField, updateFaviconPreview, faviconUploadButton);
 const uploadHeroImage = createSettingsImageUploadHandler("hero", heroUploadField, heroImagePathField, updateHeroPreview, heroUploadButton);
 const uploadAboutImage = createSettingsImageUploadHandler("about", aboutUploadField, aboutImagePathField, updateAboutPreview, aboutUploadButton);
+
+const uploadCategoryImage = async (options = {}) => uploadRestaurantImage({
+  fileInput: categoryUploadField,
+  imageInput: categoryImageField,
+  previewUpdater: updateCategoryPreview,
+  setLoading: (loading) => setUploadButtonLoading(categoryUploadButton, loading),
+  showFeedback: showCategoryFeedback,
+  purpose: "category",
+  showToast: options.showToast ?? true
+});
+
+const uploadMenuItemImage = async (options = {}) => uploadRestaurantImage({
+  fileInput: menuItemUploadField,
+  imageInput: menuItemImageField,
+  previewUpdater: updateMenuItemPreview,
+  setLoading: setMenuItemUploadButtonLoading,
+  showFeedback: showMenuItemFeedback,
+  purpose: "menu",
+  showToast: options.showToast ?? true
+});
+
+const uploadDealImage = async (options = {}) => uploadRestaurantImage({
+  fileInput: dealUploadField,
+  imageInput: dealImageField,
+  previewUpdater: updateDealPreview,
+  setLoading: setDealUploadButtonLoading,
+  showFeedback: showDealFeedback,
+  purpose: "deals",
+  showToast: options.showToast ?? true
+});
 
 const getGalleryFormPayload = () => ({
   id: String(galleryIdField?.value || "").trim(),
@@ -2014,24 +2915,6 @@ const handleGalleryUploadSelection = () => {
   updateGalleryPreviewFromFile(selectedFile);
   showGalleryFeedback("");
 };
-
-const uploadMenuItemImage = async () => uploadRestaurantImage({
-  fileInput: menuItemUploadField,
-  imageInput: menuItemImageField,
-  previewUpdater: updateMenuItemPreview,
-  setLoading: setMenuItemUploadButtonLoading,
-  showFeedback: showMenuItemFeedback,
-  purpose: "menu"
-});
-
-const uploadDealImage = async () => uploadRestaurantImage({
-  fileInput: dealUploadField,
-  imageInput: dealImageField,
-  previewUpdater: updateDealPreview,
-  setLoading: setDealUploadButtonLoading,
-  showFeedback: showDealFeedback,
-  purpose: "deals"
-});
 
 const renderGallery = () => {
   if (!galleryTableBody) {
@@ -2268,7 +3151,7 @@ const loadCategoriesForRestaurant = async (slug) => {
   const resolvedSlug = slug || "demo-pizza-house";
   try {
     const result = await fetchJson("categories.php", {
-      params: { restaurant: resolvedSlug, include_inactive: 1 },
+      params: { restaurant: resolvedSlug },
       headers: {
         "X-Admin-Dev-Token": adminDevToken
       }
@@ -2277,7 +3160,7 @@ const loadCategoriesForRestaurant = async (slug) => {
     currentCategories = Array.isArray(result.data) ? result.data : [];
     renderCategories();
 
-    const currentSelection = menuItemCategoryField?.value || "";
+    const currentSelection = menuItemIdField?.value ? (menuItemCategoryField?.value || "") : "";
     const currentSelectionLabel = menuItemCategoryField?.selectedOptions?.[0]?.textContent || "";
     populateMenuItemCategoryOptions(currentSelection, currentSelectionLabel);
     renderSnapshot();
@@ -2293,7 +3176,7 @@ const loadMenuItemsForRestaurant = async (slug) => {
   const resolvedSlug = slug || "demo-pizza-house";
   try {
     const result = await fetchJson("menu-items.php", {
-      params: { restaurant: resolvedSlug, include_inactive: 1 },
+      params: { restaurant: resolvedSlug },
       headers: {
         "X-Admin-Dev-Token": adminDevToken
       }
@@ -2316,6 +3199,7 @@ const refreshRestaurantCrudData = async (slug) => {
   await loadMenuItemsForRestaurant(resolvedSlug);
   await loadDealsForRestaurant(resolvedSlug);
   await loadGalleryForRestaurant(resolvedSlug);
+  await loadOrdersForRestaurant(resolvedSlug);
 };
 
 const saveCategory = async (event) => {
@@ -2326,20 +3210,29 @@ const saveCategory = async (event) => {
   }
 
   const selectedSlug = restaurantSelect.value || "demo-pizza-house";
-  const payload = getCategoryFormPayload();
-  const errors = validateCategoryFormPayload(payload);
-
-  if (Object.keys(errors).length > 0) {
-    showCategoryFeedback("Validation error. Check the highlighted fields.", "error");
-    showAdminToast("Validation error. Check the highlighted fields.", "warning");
-    focusFirstInvalidField(categoryForm, errors);
-    return;
-  }
 
   setCategoryButtonLoading(true);
-  showCategoryFeedback("Saving category...");
 
   try {
+    if (categoryUploadField?.files?.[0]) {
+      const uploadedPath = await uploadCategoryImage({ showToast: false });
+      if (!uploadedPath) {
+        return;
+      }
+    }
+
+    const payload = getCategoryFormPayload();
+    const errors = validateCategoryFormPayload(payload);
+
+    if (Object.keys(errors).length > 0) {
+      showCategoryFeedback("Validation error. Check the highlighted fields.", "error");
+      showAdminToast("Validation error. Check the highlighted fields.", "warning");
+      focusFirstInvalidField(categoryForm, errors);
+      return;
+    }
+
+    showCategoryFeedback("Saving category...");
+
     const method = payload.id ? "PUT" : "POST";
     const result = await fetchJson("categories.php", {
       method,
@@ -2375,20 +3268,31 @@ const saveMenuItem = async (event) => {
   }
 
   const selectedSlug = restaurantSelect.value || "demo-pizza-house";
-  const payload = getMenuItemFormPayload();
-  const errors = validateMenuItemFormPayload(payload);
-
-  if (Object.keys(errors).length > 0) {
-    showMenuItemFeedback("Validation error. Check the highlighted fields.", "error");
-    showAdminToast("Validation error. Check the highlighted fields.", "warning");
-    focusFirstInvalidField(menuItemForm, errors);
-    return;
-  }
 
   setMenuItemButtonLoading(true);
-  showMenuItemFeedback("Saving menu item...");
 
   try {
+    if (menuItemUploadField?.files?.[0]) {
+      const uploadedPath = await uploadMenuItemImage({ showToast: false });
+      if (!uploadedPath) {
+        return;
+      }
+    }
+
+    const payload = getMenuItemFormPayload();
+    const errors = validateMenuItemFormPayload(payload);
+
+    if (Object.keys(errors).length > 0) {
+      const summary = summarizeValidationErrors(errors);
+      console.warn("Menu item validation failed", { errors, payload });
+      showMenuItemFeedback(summary, "error");
+      showAdminToast(summary, "warning");
+      focusFirstInvalidField(menuItemForm, errors);
+      return;
+    }
+
+    showMenuItemFeedback("Saving menu item...");
+
     const method = payload.id ? "PUT" : "POST";
     const result = await fetchJson("menu-items.php", {
       method,
@@ -2405,10 +3309,13 @@ const saveMenuItem = async (event) => {
     showMenuItemFeedback(successMessage);
     showAdminToast(successMessage);
   } catch (error) {
-    const message = error.message || "Could not save menu item.";
+    const message = error.details
+      ? summarizeValidationErrors(error.details, error.message || "Could not save menu item.")
+      : (error.message || "Could not save menu item.");
     showMenuItemFeedback(message, "error");
     showAdminToast(message, "error");
     if (error.details) {
+      console.warn("Menu item save failed with backend validation", error.details);
       focusFirstInvalidField(menuItemForm, error.details);
     }
   } finally {
@@ -2561,10 +3468,48 @@ if (loginForm) {
 }
 
 if (ordersTableBody) {
+  syncOrdersFromStorage();
   redirectIfNeeded();
   renderOrders();
+  void loadOrdersForRestaurant(restaurantSelect?.value || "demo-pizza-house");
   renderSnapshot();
 }
+
+ordersTableBody?.addEventListener("change", (event) => {
+  const select = event.target.closest("[data-order-status-select]");
+  if (!select) {
+    return;
+  }
+
+  void updateOrderStatus(select.dataset.orderId, select.value, select);
+});
+
+ordersTableBody?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-order-cash-received]");
+  if (!button) {
+    return;
+  }
+
+  const orderId = button.dataset.orderId;
+  if (!orderId) {
+    return;
+  }
+
+  const order = (Array.isArray(currentOrders) ? currentOrders : []).find((entry) => String(entry.id) === String(orderId));
+  if (!order) {
+    return;
+  }
+
+  if (button.disabled || isOrderCancelled(order) || isOrderCashReceived(order)) {
+    return;
+  }
+
+  if (!window.confirm("Confirm cash received for this order?")) {
+    return;
+  }
+
+  void updateOrderCashReceived(orderId, button);
+});
 
 if (settingsForm && restaurantSelect) {
   redirectIfNeeded();
@@ -2583,6 +3528,7 @@ if (settingsForm && restaurantSelect) {
     loadMenuItemsForRestaurant(nextSlug);
     loadDealsForRestaurant(nextSlug);
     loadGalleryForRestaurant(nextSlug);
+    loadOrdersForRestaurant(nextSlug);
   });
 }
 
@@ -2604,25 +3550,86 @@ if (galleryForm) {
 
 galleryUploadButton?.addEventListener("click", uploadGalleryImage);
 galleryUploadField?.addEventListener("change", handleGalleryUploadSelection);
+categoryUploadButton?.addEventListener("click", uploadCategoryImage);
+categoryUploadField?.addEventListener("change", () => {
+  handleImageFileSelection(
+    categoryUploadField,
+    updateCategoryPreview,
+    String(categoryImageField?.value || "").trim(),
+    showCategoryFeedback
+  );
+});
 logoUploadButton?.addEventListener("click", uploadLogoImage);
 logoPathField?.addEventListener("input", () => {
   updateLogoPreview(logoPathField.value);
+});
+logoUploadField?.addEventListener("change", () => {
+  handleImageFileSelection(
+    logoUploadField,
+    updateLogoPreview,
+    String(logoPathField?.value || "").trim(),
+    showSettingsFeedback
+  );
+});
+faviconUploadButton?.addEventListener("click", uploadFaviconImage);
+faviconUploadField?.addEventListener("change", () => {
+  handleImageFileSelection(
+    faviconUploadField,
+    updateFaviconPreview,
+    String(faviconPathField?.value || "").trim(),
+    showSettingsFeedback
+  );
+});
+faviconPathField?.addEventListener("input", () => {
+  updateFaviconPreview(faviconPathField.value);
 });
 heroUploadButton?.addEventListener("click", uploadHeroImage);
 heroImagePathField?.addEventListener("input", () => {
   updateHeroPreview(heroImagePathField.value);
 });
+heroUploadField?.addEventListener("change", () => {
+  handleImageFileSelection(
+    heroUploadField,
+    updateHeroPreview,
+    String(heroImagePathField?.value || "").trim(),
+    showSettingsFeedback
+  );
+});
 aboutUploadButton?.addEventListener("click", uploadAboutImage);
 aboutImagePathField?.addEventListener("input", () => {
   updateAboutPreview(aboutImagePathField.value);
+});
+aboutUploadField?.addEventListener("change", () => {
+  handleImageFileSelection(
+    aboutUploadField,
+    updateAboutPreview,
+    String(aboutImagePathField?.value || "").trim(),
+    showSettingsFeedback
+  );
 });
 menuItemUploadButton?.addEventListener("click", uploadMenuItemImage);
 menuItemImageField?.addEventListener("input", () => {
   updateMenuItemPreview(menuItemImageField.value);
 });
+menuItemUploadField?.addEventListener("change", () => {
+  handleImageFileSelection(
+    menuItemUploadField,
+    updateMenuItemPreview,
+    String(menuItemImageField?.value || "").trim(),
+    showMenuItemFeedback
+  );
+});
 dealUploadButton?.addEventListener("click", uploadDealImage);
 dealImageField?.addEventListener("input", () => {
   updateDealPreview(dealImageField.value);
+});
+dealUploadField?.addEventListener("change", () => {
+  handleImageFileSelection(
+    dealUploadField,
+    updateDealPreview,
+    String(dealImageField?.value || "").trim(),
+    showDealFeedback
+  );
 });
 
 categoryCreateResetButtons.forEach((button) => {

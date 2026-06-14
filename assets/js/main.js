@@ -7,17 +7,20 @@ const toast = document.getElementById("toast");
 const skipLink = document.querySelector(".skip-link");
 const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
 const menuCards = Array.from(document.querySelectorAll(".food-card"));
-const orderButtons = Array.from(document.querySelectorAll(".order-trigger"));
 const orderForm = document.getElementById("orderForm");
 const nameField = document.getElementById("customerName");
 const phoneField = document.getElementById("customerPhone");
-const foodField = document.getElementById("foodItem");
+const orderItemsContainer = document.getElementById("orderItems");
+const addOrderItemButton = document.getElementById("addOrderItem");
+const addressField = document.getElementById("customerAddress");
 const messageField = document.getElementById("orderMessage");
 const allAnchors = Array.from(document.querySelectorAll('a[href^="#"]:not(.skip-link)'));
 const revealItems = Array.from(document.querySelectorAll(".reveal"));
 const navLinks = Array.from(document.querySelectorAll(".navbar__link"));
 
 const ORDER_STORAGE_KEY = "demoRestaurantOrders";
+const ORDER_PREVIEW_IMAGE = window.RESTAURANT_FALLBACK_IMAGE || "images/hero image.png";
+let currentMenuItems = [];
 
 if (yearNode) {
   yearNode.textContent = new Date().getFullYear();
@@ -56,6 +59,13 @@ const scrollToTarget = (selector) => {
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
+const escapeHTML = (value) => String(value ?? "")
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#39;");
+
 skipLink?.addEventListener("click", (event) => {
   const mainContent = document.getElementById("mainContent");
   if (!mainContent) {
@@ -80,33 +90,372 @@ const updateActiveFilter = (activeFilter) => {
   });
 };
 
-const ensureOrderOption = (value) => {
-  const existingOption = Array.from(foodField.options).find((option) => option.value === value);
-  if (existingOption) {
-    foodField.value = value;
+const isPositiveInteger = (value) => /^\d+$/.test(String(value ?? "").trim()) && Number(value) >= 1;
+
+const refreshMenuItemsFromWindow = () => {
+  const rawItems = Array.isArray(window.currentRestaurantMenuItems)
+    ? window.currentRestaurantMenuItems
+    : [];
+
+  currentMenuItems = rawItems
+    .map((item, index) => ({
+      id: item?.id ?? index + 1,
+      name: String(item?.name || "").trim(),
+      image: String(item?.image || "").trim(),
+      category: String(item?.category || "").trim(),
+      price: Number(item?.price || 0)
+    }))
+    .filter((item) => item.name !== "");
+
+  return currentMenuItems;
+};
+
+const findMenuItem = (value) => {
+  const needle = String(value ?? "").trim();
+  if (!needle) {
+    return null;
+  }
+
+  return currentMenuItems.find((item) => String(item.id) === needle)
+    || currentMenuItems.find((item) => item.name.toLowerCase() === needle.toLowerCase())
+    || null;
+};
+
+const renderOrderItemOptions = (select, selectedValue = "") => {
+  if (!select) {
     return;
   }
 
-  const option = document.createElement("option");
-  option.value = value;
-  option.textContent = value;
-  foodField.appendChild(option);
-  foodField.value = value;
+  const currentValue = String(selectedValue || select.value || "").trim();
+  select.innerHTML = "";
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = currentMenuItems.length ? "Select a dish" : "Menu items are loading...";
+  select.appendChild(placeholder);
+
+  currentMenuItems.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = String(item.id);
+    option.textContent = item.name;
+    select.appendChild(option);
+  });
+
+  select.disabled = currentMenuItems.length === 0;
+
+  if (currentValue && Array.from(select.options).some((option) => option.value === currentValue)) {
+    select.value = currentValue;
+  } else {
+    select.value = "";
+  }
 };
 
-const prefillOrder = (value) => {
-  ensureOrderOption(value);
+const updateOrderItemPreview = (row) => {
+  if (!row) {
+    return;
+  }
+
+  const select = row.querySelector("[data-order-item-select]");
+  const imageNode = row.querySelector("[data-order-item-preview]");
+  const nameNode = row.querySelector("[data-order-item-preview-name]");
+  const metaNode = row.querySelector("[data-order-item-preview-meta]");
+  const selectedItem = findMenuItem(select?.value);
+  const priceLabel = selectedItem ? `BDT ${Number(selectedItem.price || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "";
+
+  if (imageNode) {
+    imageNode.hidden = false;
+    imageNode.src = selectedItem?.image || ORDER_PREVIEW_IMAGE;
+    imageNode.alt = selectedItem ? `${selectedItem.name} preview` : "Select a dish preview";
+  }
+
+  if (nameNode) {
+    nameNode.textContent = selectedItem ? selectedItem.name : "Select a dish";
+  }
+
+  if (metaNode) {
+    metaNode.textContent = selectedItem
+      ? `${selectedItem.category || "Menu item"}${priceLabel ? ` - ${priceLabel}` : ""}`
+      : "Choose an item to see the preview image.";
+  }
+
+  row.dataset.selectedMenuItemId = selectedItem ? String(selectedItem.id) : "";
+};
+
+const createOrderItemRow = (initial = {}) => {
+  if (!orderItemsContainer) {
+    return null;
+  }
+
+  const row = document.createElement("div");
+  row.className = "order-item-row";
+  row.dataset.orderItemRow = "true";
+  row.innerHTML = `
+    <div class="form-group">
+      <label>Food Item</label>
+      <select data-order-item-select></select>
+    </div>
+    <div class="form-group">
+      <label>Quantity</label>
+      <input data-order-item-quantity type="number" min="1" step="1" inputmode="numeric" value="${escapeHTML(String(initial.quantity || 1))}" placeholder="1">
+    </div>
+    <div class="order-item-row__preview">
+      <img data-order-item-preview src="${escapeHTML(ORDER_PREVIEW_IMAGE)}" alt="Select a dish preview" loading="lazy">
+      <div class="order-item-row__preview-copy">
+        <strong data-order-item-preview-name>Select a dish</strong>
+        <span data-order-item-preview-meta>Choose an item to see the preview image.</span>
+      </div>
+    </div>
+    <div class="order-item-row__actions">
+      <button class="btn btn--ghost order-item-row__remove" type="button" data-order-item-remove>Remove item</button>
+    </div>
+  `;
+
+  const select = row.querySelector("[data-order-item-select]");
+  const quantityInput = row.querySelector("[data-order-item-quantity]");
+  const removeButton = row.querySelector("[data-order-item-remove]");
+
+  if (initial.menuItemId) {
+    row.dataset.pendingMenuItemId = String(initial.menuItemId);
+  }
+
+  if (initial.menuItemName) {
+    row.dataset.pendingMenuItemName = String(initial.menuItemName);
+  }
+
+  renderOrderItemOptions(select, initial.menuItemId || "");
+
+  const pendingItem = initial.menuItemId ? findMenuItem(initial.menuItemId) : findMenuItem(initial.menuItemName);
+  if (pendingItem) {
+    select.value = String(pendingItem.id);
+    delete row.dataset.pendingMenuItemId;
+    delete row.dataset.pendingMenuItemName;
+  }
+
+  select?.addEventListener("change", () => {
+    delete row.dataset.pendingMenuItemId;
+    delete row.dataset.pendingMenuItemName;
+    updateOrderItemPreview(row);
+  });
+
+  removeButton?.addEventListener("click", () => {
+    if (!orderItemsContainer) {
+      return;
+    }
+
+    if (orderItemsContainer.querySelectorAll("[data-order-item-row]").length > 1) {
+      row.remove();
+      return;
+    }
+
+    if (select) {
+      select.value = "";
+    }
+    if (quantityInput) {
+      quantityInput.value = "1";
+    }
+    delete row.dataset.pendingMenuItemId;
+    delete row.dataset.pendingMenuItemName;
+    updateOrderItemPreview(row);
+  });
+
+  updateOrderItemPreview(row);
+  return row;
+};
+
+const ensureOrderItemRow = () => {
+  if (!orderItemsContainer) {
+    return null;
+  }
+
+  const existing = orderItemsContainer.querySelector("[data-order-item-row]");
+  if (existing) {
+    return existing;
+  }
+
+  const row = createOrderItemRow();
+  if (row) {
+    orderItemsContainer.appendChild(row);
+  }
+  return row;
+};
+
+const syncOrderItemRows = () => {
+  if (!orderItemsContainer) {
+    return;
+  }
+
+  refreshMenuItemsFromWindow();
+
+  const rows = Array.from(orderItemsContainer.querySelectorAll("[data-order-item-row]"));
+  if (rows.length === 0) {
+    ensureOrderItemRow();
+    return;
+  }
+
+  rows.forEach((row) => {
+    const select = row.querySelector("[data-order-item-select]");
+    const pendingId = row.dataset.pendingMenuItemId || "";
+    const pendingName = row.dataset.pendingMenuItemName || "";
+    const currentValue = select?.value || pendingId || "";
+
+    renderOrderItemOptions(select, currentValue);
+
+    if (!select?.value && pendingName) {
+      const matched = findMenuItem(pendingName);
+      if (matched) {
+        select.value = String(matched.id);
+        delete row.dataset.pendingMenuItemId;
+        delete row.dataset.pendingMenuItemName;
+      }
+    }
+
+    updateOrderItemPreview(row);
+  });
+};
+
+addOrderItemButton?.addEventListener("click", () => {
+  if (!orderItemsContainer) {
+    return;
+  }
+
+  const row = createOrderItemRow();
+  if (!row) {
+    return;
+  }
+
+  orderItemsContainer.appendChild(row);
+  row.querySelector("[data-order-item-select]")?.focus();
+});
+
+const resetOrderFormState = () => {
+  orderForm?.reset();
+
+  if (!orderItemsContainer) {
+    return;
+  }
+
+  orderItemsContainer.innerHTML = "";
+  const row = createOrderItemRow();
+  if (row) {
+    orderItemsContainer.appendChild(row);
+  }
+};
+
+const collectOrderItems = () => {
+  if (!orderItemsContainer) {
+    return null;
+  }
+
+  const rows = Array.from(orderItemsContainer.querySelectorAll("[data-order-item-row]"));
+  const items = [];
+
+  if (!currentMenuItems.length) {
+    showToast("Menu items are still loading. Please try again in a moment.", "error");
+    return null;
+  }
+
+  for (const row of rows) {
+    const select = row.querySelector("[data-order-item-select]");
+    const quantityInput = row.querySelector("[data-order-item-quantity]");
+    const menuItemId = String(select?.value || "").trim();
+    const quantityValue = String(quantityInput?.value || "").trim();
+    const menuItem = findMenuItem(menuItemId);
+
+    if (!menuItemId || !menuItem) {
+      showToast("Please select a food item for every order line.", "error");
+      select?.focus();
+      return null;
+    }
+
+    if (!isPositiveInteger(quantityValue)) {
+      showToast("Please enter a quantity of 1 or more for each item.", "error");
+      quantityInput?.focus();
+      return null;
+    }
+
+    const unitPrice = Number(menuItem.price || 0);
+    const itemQuantity = Number(quantityValue);
+
+    items.push({
+      menu_item_id: Number(menuItem.id),
+      food_name: menuItem.name,
+      item_name: menuItem.name,
+      food_image: menuItem.image || "",
+      image: menuItem.image || "",
+      item_image: menuItem.image || "",
+      quantity: itemQuantity,
+      unit_price: unitPrice,
+      total_price: Number((unitPrice * itemQuantity).toFixed(2))
+    });
+  }
+
+  if (!items.length) {
+    showToast("Please add at least one order item.", "error");
+    return null;
+  }
+
+  return items;
+};
+
+const prefillOrder = (button) => {
+  refreshMenuItemsFromWindow();
+
+  const label = String(button?.dataset?.food || "").trim();
+  const menuItemId = String(button?.dataset?.menuItemId || "").trim();
+  const matchedItem = menuItemId ? findMenuItem(menuItemId) : findMenuItem(label);
+
+  if (!matchedItem && !menuItemId) {
+    scrollToTarget("#contact");
+    showToast(label ? `${label} is not a menu item. Choose a dish from the order form.` : "Choose a dish from the order form.", "error");
+    return;
+  }
+
+  const existingRows = Array.from(orderItemsContainer?.querySelectorAll("[data-order-item-row]") || []);
+  let row = existingRows.find((candidate) => !String(candidate.querySelector("[data-order-item-select]")?.value || "").trim()) || null;
+  if (!row) {
+    row = createOrderItemRow();
+    if (row) {
+      orderItemsContainer?.appendChild(row);
+    }
+  }
+
+  const select = row?.querySelector("[data-order-item-select]");
+
+  if (matchedItem && select) {
+    select.value = String(matchedItem.id);
+    delete row.dataset.pendingMenuItemId;
+    delete row.dataset.pendingMenuItemName;
+    updateOrderItemPreview(row);
+    showToast(`${matchedItem.name} added to your order list.`);
+  } else if (row && menuItemId) {
+    row.dataset.pendingMenuItemId = menuItemId;
+    row.dataset.pendingMenuItemName = label;
+    updateOrderItemPreview(row);
+    if (label) {
+      showToast(`${label} will be ready in the order form.`);
+    }
+  }
+
   scrollToTarget("#contact");
   window.setTimeout(() => {
-    nameField?.focus();
+    select?.focus();
   }, 500);
-  showToast(`${value} added to your quick order.`);
 };
 
 const saveLocalOrder = (payload) => {
+  const subtotal = Array.isArray(payload.items)
+    ? payload.items.reduce((sum, item) => sum + Number(item.total_price || 0), 0)
+    : 0;
   const previousOrders = JSON.parse(window.localStorage.getItem(ORDER_STORAGE_KEY) || "[]");
   previousOrders.unshift({
     ...payload,
+    subtotal: Number(subtotal.toFixed(2)),
+    total_amount: Number(subtotal.toFixed(2)),
+    payment_method: "cash",
+    payment_status: "unpaid",
+    cash_received_at: null,
+    revenue_posted_at: null,
+    revenue_amount: null,
     created_at: new Date().toISOString()
   });
   window.localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(previousOrders.slice(0, 25)));
@@ -114,6 +463,7 @@ const saveLocalOrder = (payload) => {
 
 const validateOrder = () => {
   const phonePattern = /^[0-9+\-\s()]{7,}$/;
+  const addressValue = String(addressField?.value ?? "").trim();
 
   if (!nameField.value.trim()) {
     showToast("Please enter your name.", "error");
@@ -127,9 +477,9 @@ const validateOrder = () => {
     return false;
   }
 
-  if (!foodField.value.trim()) {
-    showToast("Please select a food item.", "error");
-    foodField.focus();
+  if (addressValue.length < 5) {
+    showToast("Please enter your delivery address.", "error");
+    addressField?.focus();
     return false;
   }
 
@@ -139,7 +489,12 @@ const validateOrder = () => {
     return false;
   }
 
-  return true;
+  const items = collectOrderItems();
+  if (!items) {
+    return false;
+  }
+
+  return items;
 };
 
 if (navToggle) {
@@ -201,7 +556,7 @@ document.addEventListener("click", (event) => {
 
   const orderButton = event.target.closest(".order-trigger");
   if (orderButton) {
-    prefillOrder(orderButton.dataset.food);
+    prefillOrder(orderButton);
   }
 });
 
@@ -209,15 +564,22 @@ if (orderForm) {
   orderForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    if (!validateOrder()) {
+    const items = validateOrder();
+    if (!items) {
       return;
     }
 
+    const firstItem = items[0];
+    const matchedItem = firstItem ? findMenuItem(String(firstItem.menu_item_id)) : null;
     const payload = {
       customer_name: nameField.value.trim(),
       phone: phoneField.value.trim(),
-      food_item: foodField.value.trim(),
+      food_item: matchedItem?.name || "",
+      quantity: Number(firstItem?.quantity || 1),
+      customer_address: String(addressField?.value || "").trim(),
       message: messageField.value.trim(),
+      items,
+      order_items: items,
       status: "pending"
     };
 
@@ -239,17 +601,22 @@ if (orderForm) {
         body: JSON.stringify(payload)
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
+
+      if (response.status === 422) {
+        showToast(result.message || "Please review the highlighted order details.", "error");
+        return;
+      }
 
       if (!response.ok || !result.success) {
         throw new Error(result.message || "Backend unavailable");
       }
 
-      orderForm.reset();
+      resetOrderFormState();
       showToast(result.message || "Your order request has been sent successfully.");
     } catch (error) {
       saveLocalOrder(payload);
-      orderForm.reset();
+      resetOrderFormState();
       showToast("Saved locally. The backend can be connected later.", "success");
       console.info("Order fallback:", error.message);
     } finally {
@@ -279,7 +646,10 @@ window.refreshRestaurantInteractions = () => {
     revealObserver.observe(item);
   });
   updateActiveFilter("all");
+  syncOrderItemRows();
 };
+
+syncOrderItemRows();
 
 const sectionObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {

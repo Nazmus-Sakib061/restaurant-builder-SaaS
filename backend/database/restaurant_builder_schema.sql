@@ -259,7 +259,10 @@ CREATE TABLE orders (
   delivery_charge DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   payment_method ENUM('cash', 'bkash', 'nagad', 'card', 'other') NOT NULL DEFAULT 'cash',
-  payment_status ENUM('unpaid', 'paid', 'partial', 'refunded') NOT NULL DEFAULT 'unpaid',
+  payment_status ENUM('unpaid', 'paid', 'partial', 'cash_received', 'refunded') NOT NULL DEFAULT 'unpaid',
+  cash_received_at DATETIME NULL DEFAULT NULL,
+  revenue_posted_at DATETIME NULL DEFAULT NULL,
+  revenue_amount DECIMAL(10,2) NULL DEFAULT NULL,
   order_status ENUM('pending', 'accepted', 'preparing', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
   note TEXT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -281,7 +284,10 @@ CREATE TABLE order_items (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   order_id BIGINT UNSIGNED NOT NULL,
   menu_item_id BIGINT UNSIGNED NULL DEFAULT NULL,
+  food_name VARCHAR(150) NULL DEFAULT NULL,
+  food_image VARCHAR(255) NULL DEFAULT NULL,
   item_name VARCHAR(150) NOT NULL,
+  item_image VARCHAR(255) NULL DEFAULT NULL,
   quantity INT UNSIGNED NOT NULL DEFAULT 1,
   unit_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   total_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -297,6 +303,30 @@ CREATE TABLE order_items (
   CONSTRAINT fk_order_items_menu_item
     FOREIGN KEY (menu_item_id) REFERENCES menu_items (id)
     ON DELETE SET NULL
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE revenue_transactions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  restaurant_id BIGINT UNSIGNED NOT NULL,
+  order_id BIGINT UNSIGNED NOT NULL,
+  type VARCHAR(50) NOT NULL DEFAULT 'cash_received',
+  amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  payment_method VARCHAR(30) NOT NULL DEFAULT 'cash',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_revenue_transactions_order_id (order_id),
+  KEY idx_revenue_transactions_restaurant_id (restaurant_id),
+  KEY idx_revenue_transactions_type (type),
+  KEY idx_revenue_transactions_created_at (created_at),
+  CONSTRAINT fk_revenue_transactions_restaurant
+    FOREIGN KEY (restaurant_id) REFERENCES restaurants (id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_revenue_transactions_order
+    FOREIGN KEY (order_id) REFERENCES orders (id)
+    ON DELETE CASCADE
     ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
