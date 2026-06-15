@@ -11,15 +11,35 @@ DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS reservations;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS deal_items;
+DROP TABLE IF EXISTS revenue_transactions;
 DROP TABLE IF EXISTS gallery_images;
 DROP TABLE IF EXISTS menu_items;
 DROP TABLE IF EXISTS menu_categories;
 DROP TABLE IF EXISTS restaurant_settings;
 DROP TABLE IF EXISTS deals;
+DROP TABLE IF EXISTS restaurant_users;
+DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS theme_presets;
 DROP TABLE IF EXISTS restaurants;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+CREATE TABLE users (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(150) NOT NULL,
+  email VARCHAR(191) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role ENUM('super_admin', 'restaurant_owner', 'manager') NOT NULL DEFAULT 'restaurant_owner',
+  status ENUM('active', 'inactive', 'blocked') NOT NULL DEFAULT 'active',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_users_email (email),
+  KEY idx_users_role (role),
+  KEY idx_users_status (status),
+  KEY idx_users_created_at (created_at),
+  KEY idx_users_updated_at (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE restaurants (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -29,7 +49,7 @@ CREATE TABLE restaurants (
   owner_name VARCHAR(150) NULL DEFAULT NULL,
   owner_email VARCHAR(191) NULL DEFAULT NULL,
   owner_phone VARCHAR(30) NULL DEFAULT NULL,
-  owner_user_id INT NULL DEFAULT NULL COMMENT 'Reserved for future Core Auth users.id mapping',
+  owner_user_id BIGINT UNSIGNED NULL DEFAULT NULL COMMENT 'Core Auth users.id mapping',
   status ENUM('active', 'inactive', 'suspended') NOT NULL DEFAULT 'active',
   subscription_status ENUM('trial', 'active', 'expired', 'cancelled') NOT NULL DEFAULT 'trial',
   trial_ends_at DATETIME NULL DEFAULT NULL,
@@ -42,7 +62,34 @@ CREATE TABLE restaurants (
   KEY idx_restaurants_subscription_status (subscription_status),
   KEY idx_restaurants_created_at (created_at),
   KEY idx_restaurants_updated_at (updated_at),
-  KEY idx_restaurants_owner_email (owner_email)
+  KEY idx_restaurants_owner_email (owner_email),
+  KEY idx_restaurants_owner_user_id (owner_user_id),
+  CONSTRAINT fk_restaurants_owner_user
+    FOREIGN KEY (owner_user_id) REFERENCES users (id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE restaurant_users (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  restaurant_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  role ENUM('restaurant_owner', 'manager') NOT NULL DEFAULT 'manager',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_restaurant_users_restaurant_user (restaurant_id, user_id),
+  KEY idx_restaurant_users_restaurant_id (restaurant_id),
+  KEY idx_restaurant_users_user_id (user_id),
+  KEY idx_restaurant_users_role (role),
+  KEY idx_restaurant_users_created_at (created_at),
+  CONSTRAINT fk_restaurant_users_restaurant
+    FOREIGN KEY (restaurant_id) REFERENCES restaurants (id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_restaurant_users_user
+    FOREIGN KEY (user_id) REFERENCES users (id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE theme_presets (

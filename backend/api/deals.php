@@ -356,7 +356,7 @@ function deal_validate_input(array $input): array
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $pdo = require_connection();
-$restaurant = restaurant_context();
+$restaurant = auth_admin_restaurant_context($pdo);
 $restaurantId = (int) $restaurant['restaurant_id'];
 
 if ($method === 'GET') {

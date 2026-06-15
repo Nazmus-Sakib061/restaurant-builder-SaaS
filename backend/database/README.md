@@ -35,16 +35,28 @@ If you prefer the SQL scripts to create the database automatically, you can impo
 
 ## Multi-Tenant Notes
 
+- `users` stores the session login accounts.
+- `restaurant_users` maps a user to the restaurants they can manage.
 - `restaurant_id` is the tenant boundary.
 - Every restaurant-specific table uses `restaurant_id` so each restaurant can keep its own menu, settings, orders, reservations, and deals.
 - `slug` is the URL-safe unique identifier used for lookups such as `demo-pizza-house` or `family-pizza-combo`.
 - `theme_presets` stores reusable design palettes so different restaurant types can switch visual themes without changing the frontend code.
 
-## Core Auth Integration Later
+## Auth Foundation
 
-- The schema includes `owner_user_id` on `restaurants` as a future bridge to the Core Auth Module.
-- No auth tables are seeded here.
-- User accounts, login, and permissions should be connected later from the separate auth module.
+- `restaurants.owner_user_id` now links to `users.id`.
+- The seed file creates a local-dev super admin and one demo restaurant owner.
+- Login is handled through the PHP session-based admin auth flow.
+- The seeded password hashes are stored in the SQL file, not in plaintext.
+
+### Default Local-Dev Logins
+
+- Super admin:
+  - email: `admin@example.com`
+  - password: `change-me-later`
+- Demo restaurant owner:
+  - email: `owner@example.com`
+  - password: `owner-change-me`
 
 ## Safety Warning
 

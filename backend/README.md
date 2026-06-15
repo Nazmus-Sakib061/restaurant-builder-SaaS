@@ -44,34 +44,44 @@ Error:
 
 Common response helpers live in `backend/api/_response.php`.
 
+## Auth
+
+- `backend/api/auth.php`
+  - `GET` current session user and accessible restaurants
+  - `POST` login
+  - `DELETE` logout
+
+- `backend/api/current-user.php`
+  - `GET` current session user payload
+
 ## API endpoints
 
 - `backend/api/restaurants.php`
-  - `GET` active restaurants list
+  - `GET` restaurants visible to the logged-in user
 
 - `backend/api/settings.php`
-  - `GET` current restaurant settings
+  - `GET` current restaurant settings for the active session
   - `POST` / `PUT` upsert settings for the active restaurant
 
 - `backend/api/categories.php`
-  - `GET` restaurant categories
+  - `GET` restaurant categories for the active session
   - `POST` create category
   - `PUT` update category
   - `DELETE` soft delete category
 
 - `backend/api/menu-items.php`
-  - `GET` restaurant menu items
+  - `GET` restaurant menu items for the active session
   - Supports `category`, `featured`, and `available` filters
   - `POST` create menu item
   - `PUT` update menu item
   - `DELETE` soft delete menu item
 
 - `backend/api/deals.php`
-  - `GET` active deals with nested items
+  - `GET` active deals with nested items for the active session
   - `POST` / `PUT` / `DELETE` deal management
 
 - `backend/api/gallery.php`
-  - `GET` active gallery images
+  - `GET` active gallery images for the active session
   - `POST` / `PUT` / `DELETE` gallery management
 - `backend/api/uploads.php`
   - `POST` restaurant-scoped Gallery image uploads
@@ -80,15 +90,15 @@ Common response helpers live in `backend/api/_response.php`.
   - returns a project-relative public path; it does not write an absolute server path to the database
 
 - `backend/api/orders.php`
-  - `GET` restaurant orders with items
-  - `POST` create order + order items in a transaction
-  - `PUT` update order fields
-  - `DELETE` remove order
+  - `GET` restaurant orders with items for the active session
+  - `POST` create order + order items in a transaction for the public site
+  - `PUT` update order fields for the admin session
+  - `DELETE` remove order for the admin session
 
 - `backend/api/reservations.php`
-  - `GET` restaurant reservations
-  - `POST` create reservation
-  - `PUT` update reservation status
+  - `GET` restaurant reservations for the admin session
+  - `POST` create reservation for the public site
+  - `PUT` update reservation status for the admin session
 
 - `backend/api/site-data.php`
   - Combined public read-only site payload:
@@ -104,13 +114,8 @@ Common response helpers live in `backend/api/_response.php`.
 `backend/api/foods.php` is kept as a legacy alias and loads `menu-items.php`.
 New code should use `menu-items.php` directly.
 
-This backend layer is intentionally read-only for public site data. Admin CRUD can be connected later without changing the public API shape.
-
-Public write methods currently return `403` with:
-
-`Write operations are disabled until authentication is connected.`
-
-The temporary guard lives in `backend/api/_helpers.php` and should be replaced with Core Auth role-based protection when the admin panel is wired.
+Admin CRUD now uses PHP session authentication and restaurant ownership checks.
+Public visitors should continue to use `site-data.php` and the public `POST` flows on `orders.php` and `reservations.php`.
 
 ## Tenant isolation
 
@@ -134,13 +139,9 @@ Several resources use soft delete by updating `status` to `inactive`:
 
 ## Quick test URLs
 
-- `http://localhost/restaurant_builder/backend/api/settings.php?restaurant=demo-pizza-house`
-- `http://localhost/restaurant_builder/backend/api/categories.php?restaurant=demo-pizza-house`
-- `http://localhost/restaurant_builder/backend/api/menu-items.php?restaurant=demo-pizza-house`
-- `http://localhost/restaurant_builder/backend/api/deals.php?restaurant=demo-pizza-house`
-- `http://localhost/restaurant_builder/backend/api/gallery.php?restaurant=demo-pizza-house`
-- `http://localhost/restaurant_builder/backend/api/reservations.php?restaurant=demo-pizza-house`
 - `http://localhost/restaurant_builder/backend/api/site-data.php?restaurant=demo-pizza-house`
+- `http://localhost/restaurant_builder/admin/login.php`
+- `http://localhost/restaurant_builder/backend/api/current-user.php`
 
 Repeat the same URLs with:
 

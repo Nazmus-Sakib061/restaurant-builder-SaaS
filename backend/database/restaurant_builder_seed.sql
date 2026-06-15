@@ -5,12 +5,15 @@ SET FOREIGN_KEY_CHECKS = 0;
 DELETE FROM order_items;
 DELETE FROM reservations;
 DELETE FROM orders;
+DELETE FROM revenue_transactions;
 DELETE FROM deal_items;
 DELETE FROM gallery_images;
 DELETE FROM menu_items;
 DELETE FROM menu_categories;
 DELETE FROM restaurant_settings;
 DELETE FROM deals;
+DELETE FROM restaurant_users;
+DELETE FROM users;
 DELETE FROM restaurants;
 DELETE FROM theme_presets;
 
@@ -47,6 +50,31 @@ FROM theme_presets
 WHERE slug = 'biryani-house-dark'
 LIMIT 1;
 
+INSERT INTO users (
+  name,
+  email,
+  password_hash,
+  role,
+  status
+) VALUES (
+  'Super Admin',
+  'admin@example.com',
+  '$2y$10$DMf279wQSlKc61v07.v3ZOmEQeks6oIH0WO7HhB4RTlyVVXzSJuXW',
+  'super_admin',
+  'active'
+), (
+  'Demo Owner',
+  'owner@example.com',
+  '$2y$10$WNk8Q9YD7brg0il8167uGO.6JVrrmNPrLKqaJE8LBfAVonSVrycsG',
+  'restaurant_owner',
+  'active'
+);
+
+SELECT id INTO @demo_owner_id
+FROM users
+WHERE email = 'owner@example.com'
+LIMIT 1;
+
 INSERT INTO restaurants (
   name,
   slug,
@@ -65,13 +93,23 @@ INSERT INTO restaurants (
   'Demo Owner',
   'hello@pizzahouse.demo',
   '+880 1712 345 678',
-  NULL,
+  @demo_owner_id,
   'active',
   'trial',
   DATE_ADD(NOW(), INTERVAL 30 DAY)
 );
 
 SELECT LAST_INSERT_ID() INTO @pizza_restaurant_id;
+
+INSERT INTO restaurant_users (
+  restaurant_id,
+  user_id,
+  role
+) VALUES (
+  @pizza_restaurant_id,
+  @demo_owner_id,
+  'restaurant_owner'
+);
 
 INSERT INTO restaurant_settings (
   restaurant_id,

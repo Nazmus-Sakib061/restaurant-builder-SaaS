@@ -2,84 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0; url=login.php">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Pizza House admin login demo for future backend CRUD management.">
-  <title>Pizza House Admin | Login</title>
-  <link rel="stylesheet" href="assets/css/admin.css?v=admin-crud-regression-1">
+  <title>Redirecting...</title>
+  <script>
+    window.location.replace('login.php');
+  </script>
 </head>
-<body class="admin-page">
-  <main class="auth-shell">
-    <section class="auth-intro">
-      <a class="admin-brand" href="../index.html">
-        <span class="admin-brand__mark" aria-hidden="true">
-          <svg viewBox="0 0 64 64" aria-hidden="true">
-            <path d="M11 15c11-4 30-4 42 0-3 6-7 10-16 12 7 3 10 8 10 15 0 10-8 17-16 17S15 52 15 42c0-9 4-15 12-17-6-2-11-6-16-10Z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/>
-            <path d="M28 21c2-3 4-5 8-7" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
-            <circle cx="28" cy="34" r="3.2" fill="currentColor"/>
-            <circle cx="39" cy="28" r="3.2" fill="currentColor"/>
-            <circle cx="36" cy="42" r="3.2" fill="currentColor"/>
-          </svg>
-        </span>
-        <span class="admin-brand__text">
-          <strong>Pizza House</strong>
-          <small>Admin Control</small>
-        </span>
-      </a>
-
-      <span class="admin-tag">Restaurant Dashboard</span>
-      <h1>Manage menu items, offers, orders, and settings from one place.</h1>
-      <p>
-        This is a polished frontend admin shell designed to connect to MySQL and PHP CRUD later,
-        while still feeling like a real restaurant control room today.
-      </p>
-
-      <div class="auth-points">
-        <article class="auth-point">
-          <strong>Menu CRUD</strong>
-          <span>Add, edit, and archive food items from the backend later.</span>
-        </article>
-        <article class="auth-point">
-          <strong>Order Inbox</strong>
-          <span>View customer orders from the demo site or the database table.</span>
-        </article>
-        <article class="auth-point">
-          <strong>Promo Control</strong>
-          <span>Manage deals, categories, and restaurant settings in one workflow.</span>
-        </article>
-      </div>
-
-      <div class="auth-demo">
-        <span>Demo credentials</span>
-        <strong>admin / 123456</strong>
-      </div>
-    </section>
-
-    <section class="auth-card">
-      <span class="auth-card__eyebrow">Secure Sign In</span>
-      <h2>Welcome back</h2>
-      <p>Enter the demo credentials to open the dashboard shell.</p>
-
-      <form id="loginForm" class="auth-form" novalidate>
-        <div class="form-group">
-          <label for="adminUser">Username</label>
-          <input id="adminUser" name="username" type="text" autocomplete="username" placeholder="admin">
-        </div>
-        <div class="form-group">
-          <label for="adminPass">Password</label>
-          <input id="adminPass" name="password" type="password" autocomplete="current-password" placeholder="123456">
-        </div>
-
-        <button type="submit" class="btn btn--primary btn--block">Enter Dashboard</button>
-      </form>
-
-      <p class="auth-feedback" id="loginFeedback" aria-live="polite"></p>
-
-      <p class="auth-footer-note">
-        This login is a demo scaffold only. Replace it with PHP session auth when the backend is ready.
-      </p>
-    </section>
-  </main>
-
-  <script src="assets/js/admin.js?v=admin-crud-regression-1"></script>
+<body>
+  <p>Redirecting to the admin login page...</p>
 </body>
 </html>

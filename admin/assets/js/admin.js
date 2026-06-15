@@ -1,8 +1,8 @@
-const sessionKey = "demoRestaurantAdminSession";
-const ordersKey = "demoRestaurantOrders";
+﻿const ordersKey = "demoRestaurantOrders";
 const selectedRestaurantKey = "demoRestaurantSelectedSlug";
-const adminDevToken = "local-dev-admin-token-change-later";
 const apiBase = "../backend/api";
+const loginPageUrl = "login.php";
+const dashboardPageUrl = "dashboard.php";
 
 const loginForm = document.getElementById("loginForm");
 const sidebar = document.getElementById("adminSidebar");
@@ -119,11 +119,6 @@ const galleryPreviewFallback = document.getElementById("galleryPreviewFallback")
 const galleryAltField = document.getElementById("galleryAltField");
 const gallerySortField = document.getElementById("gallerySortField");
 const galleryStatusField = document.getElementById("galleryStatusField");
-
-const demoCredentials = {
-  username: "admin",
-  password: "123456"
-};
 
 const menuSnapshot = [
   { name: "Margherita Blaze Pizza", category: "Pizza", price: "$12.90" },
@@ -277,6 +272,7 @@ const fetchJson = async (endpoint, options = {}) => {
   const response = await fetch(buildApiUrl(endpoint, params), {
     method,
     headers: requestHeaders,
+    credentials: "same-origin",
     body: body !== undefined ? JSON.stringify(body) : undefined
   });
 
@@ -291,6 +287,11 @@ const fetchJson = async (endpoint, options = {}) => {
     const error = new Error(result?.message || `Request failed with status ${response.status}.`);
     error.details = result?.errors || null;
     error.status = response.status;
+
+    if (response.status === 401 && !loginForm) {
+      window.location.href = loginPageUrl;
+    }
+
     throw error;
   }
 
@@ -670,7 +671,7 @@ const renderOrderItems = (items) => {
 
     const quantity = document.createElement("span");
     quantity.className = "order-item-qty";
-    quantity.textContent = `× ${Number(item.quantity || 1)}`;
+    quantity.textContent = `Ã— ${Number(item.quantity || 1)}`;
 
     row.append(thumb, indexBadge, name, quantity);
     itemList.appendChild(row);
@@ -774,7 +775,6 @@ const loadRevenueSummaryForRestaurant = async (slug) => {
     const result = await fetchJson("orders.php", {
       params: { restaurant: resolvedSlug, action: "summary" },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -794,7 +794,6 @@ const loadOrdersForRestaurant = async (slug) => {
     const result = await fetchJson("orders.php", {
       params: { restaurant: resolvedSlug },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -861,7 +860,6 @@ const updateOrderStatus = async (orderId, nextStatus, selectElement) => {
         status: normalizedStatus
       },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -941,7 +939,6 @@ const updateOrderCashReceived = async (orderId, buttonElement) => {
         id: orderId
       },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -980,10 +977,7 @@ const openSidebar = (open) => {
 };
 
 const redirectIfNeeded = () => {
-  const isAuthenticated = Boolean(window.localStorage.getItem(sessionKey));
-  if (!isAuthenticated && document.body.classList.contains("admin-page") && !loginForm) {
-    window.location.href = "index.html";
-  }
+  // Session auth is handled by the PHP entry pages and API guards.
 };
 
 const setButtonLoading = (loading) => {
@@ -1049,7 +1043,7 @@ const showAdminToast = (message, type = "success") => {
       <strong class="admin-toast__title">${safeType === "error" ? "Error" : safeType === "warning" ? "Notice" : "Success"}</strong>
       <p class="admin-toast__message">${escapeHTML(text)}</p>
     </div>
-    <button type="button" class="admin-toast__close" aria-label="Dismiss notification">×</button>
+    <button type="button" class="admin-toast__close" aria-label="Dismiss notification">Ã—</button>
   `;
 
   const dismissToast = () => {
@@ -1277,7 +1271,7 @@ const renderSnapshot = () => {
       .map((item) => `
         <article class="snapshot-item">
           <strong>${escapeHTML(item.name)}</strong>
-          <span>${escapeHTML(item.category)} · ${escapeHTML(item.price)}</span>
+          <span>${escapeHTML(item.category)} Â· ${escapeHTML(item.price)}</span>
         </article>
       `)
       .join("");
@@ -1351,7 +1345,12 @@ const updatePublicPreviewLink = (slug) => {
     return;
   }
 
-  const resolvedSlug = slug || "demo-pizza-house";
+  const resolvedSlug = String(slug || "").trim();
+  if (!resolvedSlug) {
+    publicPreviewLink.href = "../index.html";
+    return;
+  }
+
   publicPreviewLink.href = `../index.html?restaurant=${encodeURIComponent(resolvedSlug)}`;
 };
 
@@ -1361,6 +1360,17 @@ const populateRestaurantSelect = (restaurants, preferredSlug = "") => {
   }
 
   restaurantSelect.innerHTML = "";
+
+  if (!Array.isArray(restaurants) || restaurants.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No restaurants assigned";
+    restaurantSelect.appendChild(option);
+    restaurantSelect.value = "";
+    window.localStorage.removeItem(selectedRestaurantKey);
+    updatePublicPreviewLink("");
+    return;
+  }
 
   restaurants.forEach((restaurant) => {
     const option = document.createElement("option");
@@ -1516,14 +1526,9 @@ const loadSettingsForRestaurant = async (slug) => {
   }
 
   try {
-    const response = await fetch(`${apiBase}/settings.php?restaurant=${encodeURIComponent(resolvedSlug)}`, {
-      headers: { Accept: "application/json" }
+    const result = await fetchJson("settings.php", {
+      params: { restaurant: resolvedSlug }
     });
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || "Unable to load settings");
-    }
 
     currentRestaurant = result.data?.restaurant || null;
     currentSettings = result.data?.settings || null;
@@ -1538,6 +1543,12 @@ const loadSettingsForRestaurant = async (slug) => {
     window.localStorage.setItem(selectedRestaurantKey, currentRestaurant?.slug || resolvedSlug);
     showSettingsFeedback(`Loaded ${currentRestaurant?.name || resolvedSlug} settings.`);
   } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      showSettingsFeedback(error.message || "Unable to load settings.", "error");
+      showAdminToast(error.message || "Unable to load settings.", "error");
+      return;
+    }
+
     showSettingsFeedback(error.message || "Unable to load settings.", "error");
   }
 };
@@ -1550,13 +1561,14 @@ const loadRestaurants = async () => {
   const preferredSlug = window.localStorage.getItem(selectedRestaurantKey) || "demo-pizza-house";
 
   try {
-    const response = await fetch(`${apiBase}/restaurants.php`, {
-      headers: { Accept: "application/json" }
-    });
-    const result = await response.json();
+    const result = await fetchJson("restaurants.php");
 
-    if (!response.ok || !result.success || !Array.isArray(result.data) || !result.data.length) {
-      throw new Error(result.message || "No restaurants found");
+    if (!Array.isArray(result.data) || !result.data.length) {
+      loadedRestaurants = [];
+      populateRestaurantSelect([], preferredSlug);
+      showSettingsFeedback("No restaurants are assigned to this account.", "error");
+      showAdminToast("No restaurants are assigned to this account.", "error");
+      return;
     }
 
     loadedRestaurants = result.data;
@@ -1569,16 +1581,16 @@ const loadRestaurants = async () => {
     await loadGalleryForRestaurant(selectedSlug);
     await loadOrdersForRestaurant(selectedSlug);
   } catch (error) {
-    loadedRestaurants = [{ id: 1, name: "Demo Pizza House", slug: "demo-pizza-house", business_type: "pizza" }];
-    populateRestaurantSelect(loadedRestaurants, preferredSlug);
-    await loadSettingsForRestaurant(restaurantSelect.value || "demo-pizza-house");
-    await loadCategoriesForRestaurant(restaurantSelect.value || "demo-pizza-house");
-    await loadMenuItemsForRestaurant(restaurantSelect.value || "demo-pizza-house");
-    await loadDealsForRestaurant(restaurantSelect.value || "demo-pizza-house");
-    await loadGalleryForRestaurant(restaurantSelect.value || "demo-pizza-house");
-    await loadOrdersForRestaurant(restaurantSelect.value || "demo-pizza-house");
-    showSettingsFeedback(`Loaded fallback restaurant list because the API was unavailable.`, "error");
-    console.warn("Restaurant list fallback:", error.message);
+    if (error.status === 401 || error.status === 403) {
+      showSettingsFeedback(error.message || "Unable to load restaurants.", "error");
+      showAdminToast(error.message || "Unable to load restaurants.", "error");
+      return;
+    }
+
+    loadedRestaurants = [];
+    populateRestaurantSelect([], preferredSlug);
+    showSettingsFeedback(error.message || "Unable to load restaurants.", "error");
+    showAdminToast(error.message || "Unable to load restaurants.", "error");
   }
 };
 
@@ -1634,30 +1646,11 @@ const saveSettings = async (event) => {
 
     showSettingsFeedback("Saving settings...");
 
-    const response = await fetch(`${apiBase}/settings.php?restaurant=${encodeURIComponent(selectedSlug)}`, {
+    const result = await fetchJson("settings.php", {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-Admin-Dev-Token": adminDevToken
-      },
-      body: JSON.stringify(payload)
+      params: { restaurant: selectedSlug },
+      body: payload
     });
-
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-      const message = result && result.errors
-        ? Object.values(result.errors)[0] || result.message || "Could not save settings."
-        : result.message || "Could not save settings.";
-      if (result && result.errors) {
-        showSettingsFeedback(message, "error");
-      } else {
-        showSettingsFeedback(message, "error");
-      }
-      showAdminToast(message, "error");
-      return;
-    }
 
     currentRestaurant = result.data?.restaurant || currentRestaurant;
     currentSettings = result.data?.settings || currentSettings;
@@ -1668,6 +1661,12 @@ const saveSettings = async (event) => {
     showAdminToast(result.message || "Settings saved successfully.");
     window.localStorage.setItem(selectedRestaurantKey, currentRestaurant?.slug || selectedSlug);
   } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      showSettingsFeedback(error.message || "Could not save settings.", "error");
+      showAdminToast(error.message || "Could not save settings.", "error");
+      return;
+    }
+
     const message = error.message || "Unexpected error while saving settings.";
     showSettingsFeedback(message, "error");
     showAdminToast(message, "error");
@@ -2226,7 +2225,6 @@ const loadDealsForRestaurant = async (slug) => {
     const result = await fetchJson("deals.php", {
       params: { restaurant: resolvedSlug, include_inactive: 1 },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -2280,7 +2278,6 @@ const saveDeal = async (event) => {
         ends_at: prepareDealDateTimeForApi(payload.ends_at)
       },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -2335,7 +2332,6 @@ const deleteDeal = async (id) => {
       params: { restaurant: selectedSlug },
       body: { id: deal.id },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -2628,7 +2624,6 @@ const uploadRestaurantImage = async ({
       method: "POST",
       headers: {
         Accept: "application/json",
-        "X-Admin-Dev-Token": adminDevToken
       },
       body: formData
     });
@@ -2956,7 +2951,6 @@ const loadGalleryForRestaurant = async (slug) => {
     const result = await fetchJson("gallery.php", {
       params: { restaurant: resolvedSlug, include_inactive: 1 },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -3026,7 +3020,6 @@ const saveGallery = async (event) => {
       params: { restaurant: selectedSlug },
       body: payload,
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -3081,7 +3074,6 @@ const deleteGallery = async (id) => {
       params: { restaurant: selectedSlug },
       body: { id: gallery.id },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -3153,7 +3145,6 @@ const loadCategoriesForRestaurant = async (slug) => {
     const result = await fetchJson("categories.php", {
       params: { restaurant: resolvedSlug },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -3178,7 +3169,6 @@ const loadMenuItemsForRestaurant = async (slug) => {
     const result = await fetchJson("menu-items.php", {
       params: { restaurant: resolvedSlug },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -3239,7 +3229,6 @@ const saveCategory = async (event) => {
       params: { restaurant: selectedSlug },
       body: payload,
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -3299,7 +3288,6 @@ const saveMenuItem = async (event) => {
       params: { restaurant: selectedSlug },
       body: payload,
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -3357,7 +3345,6 @@ const deleteCategory = async (id) => {
       params: { restaurant: selectedSlug },
       body: { id: category.id },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -3411,7 +3398,6 @@ const deleteMenuItem = async (id) => {
       params: { restaurant: selectedSlug },
       body: { id: menuItem.id },
       headers: {
-        "X-Admin-Dev-Token": adminDevToken
       }
     });
 
@@ -3432,11 +3418,7 @@ const deleteMenuItem = async (id) => {
 };
 
 if (loginForm) {
-  if (window.localStorage.getItem(sessionKey)) {
-    window.location.href = "dashboard.html";
-  }
-
-  loginForm.addEventListener("submit", (event) => {
+  loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     if (loginFeedback) {
@@ -3444,26 +3426,52 @@ if (loginForm) {
       loginFeedback.classList.remove("is-error");
     }
 
-    const username = loginForm.username.value.trim();
-    const password = loginForm.password.value.trim();
+    const submitButton = loginForm.querySelector('button[type="submit"]');
+    const formData = new FormData(loginForm);
+    const email = String(formData.get("email") || formData.get("username") || "").trim();
+    const password = String(formData.get("password") || "").trim();
 
-    if (username !== demoCredentials.username || password !== demoCredentials.password) {
+    if (!email || !password) {
       if (loginFeedback) {
-        loginFeedback.textContent = "Demo login failed. Use admin / 123456.";
+        loginFeedback.textContent = "Email and password are required.";
         loginFeedback.classList.add("is-error");
       }
       return;
     }
 
-    window.localStorage.setItem(
-      sessionKey,
-      JSON.stringify({
-        username: demoCredentials.username,
-        signedInAt: new Date().toISOString()
-      })
-    );
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Signing in...";
+    }
 
-    window.location.href = "dashboard.html";
+    try {
+      await fetchJson("auth.php", {
+        method: "POST",
+        body: {
+          email,
+          password
+        }
+      });
+
+      window.location.href = dashboardPageUrl;
+    } catch (error) {
+      const validationMessages = error.details && typeof error.details === "object"
+        ? Object.values(error.details)
+          .map((value) => String(value || "").trim())
+          .filter(Boolean)
+        : [];
+      const message = validationMessages[0] || error.message || "Unable to sign in.";
+
+      if (loginFeedback) {
+        loginFeedback.textContent = message;
+        loginFeedback.classList.add("is-error");
+      }
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Enter Dashboard";
+      }
+    }
   });
 }
 
@@ -3471,7 +3479,6 @@ if (ordersTableBody) {
   syncOrdersFromStorage();
   redirectIfNeeded();
   renderOrders();
-  void loadOrdersForRestaurant(restaurantSelect?.value || "demo-pizza-house");
   renderSnapshot();
 }
 
@@ -3717,9 +3724,18 @@ galleryTableBody?.addEventListener("click", (event) => {
 });
 
 logoutButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    window.localStorage.removeItem(sessionKey);
-    window.location.href = "index.html";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+
+    try {
+      await fetchJson("auth.php", {
+        method: "DELETE"
+      });
+    } catch (error) {
+      console.warn("Logout request failed:", error.message);
+    } finally {
+      window.location.href = loginPageUrl;
+    }
   });
 });
 
@@ -3742,3 +3758,5 @@ window.addEventListener("keydown", (event) => {
     openSidebar(false);
   }
 });
+
+

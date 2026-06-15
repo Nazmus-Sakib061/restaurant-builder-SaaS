@@ -127,7 +127,7 @@ function gallery_image_path_is_valid(string $image): bool
 
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 $pdo = require_connection();
-$restaurant = restaurant_context();
+$restaurant = auth_admin_restaurant_context($pdo);
 $restaurantId = (int) $restaurant['restaurant_id'];
 
 if ($method === 'GET') {

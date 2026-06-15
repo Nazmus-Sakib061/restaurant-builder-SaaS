@@ -7,18 +7,13 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($method === 'GET') {
     $pdo = require_connection();
+    $user = auth_require_login($pdo);
 
-    $statement = $pdo->prepare(
-        'SELECT id, name, slug, business_type
-         FROM restaurants
-         WHERE status = "active"
-         ORDER BY name ASC, created_at DESC'
-    );
-    $statement->execute();
+    $restaurants = auth_user_restaurants($pdo, $user);
 
     json_response([
         'success' => true,
-        'data' => $statement->fetchAll(),
+        'data' => $restaurants,
     ]);
 }
 

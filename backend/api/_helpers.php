@@ -68,36 +68,24 @@ function require_connection(): PDO
 
 function api_write_enabled(): bool
 {
-    // TODO: Replace this temporary write guard with Core Auth role-based protection.
-    return false;
+    return true;
 }
 
 function api_require_write_enabled(string $method): void
 {
-    if (in_array(strtoupper($method), ['POST', 'PUT', 'PATCH', 'DELETE'], true) && !api_write_enabled()) {
-        json_response([
-            'success' => false,
-            'message' => 'Write operations are disabled until authentication is connected.',
-        ], 403);
-    }
+    // Legacy compatibility hook. Authentication is enforced directly in each endpoint now.
 }
 
 function require_admin_write_access(): void
 {
-    if (!defined('ADMIN_DEV_WRITES_ENABLED') || ADMIN_DEV_WRITES_ENABLED !== true) {
-        json_response([
-            'success' => false,
-            'message' => 'Admin write access denied.',
-        ], 403);
-    }
+    $pdo = require_connection();
+    auth_require_login($pdo);
+}
 
-    $token = request_header_value('X-Admin-Dev-Token');
-    if ($token === null || !defined('ADMIN_DEV_TOKEN') || !hash_equals((string) ADMIN_DEV_TOKEN, $token)) {
-        json_response([
-            'success' => false,
-            'message' => 'Admin write access denied.',
-        ], 403);
-    }
+function require_admin_read_access(): void
+{
+    $pdo = require_connection();
+    auth_require_login($pdo);
 }
 
 function strict_positive_int(mixed $value): ?int
@@ -214,3 +202,4 @@ function is_duplicate_key_error(Throwable $throwable): bool
 }
 
 require_once __DIR__ . '/../helpers/restaurant_context.php';
+require_once __DIR__ . '/../helpers/auth.php';

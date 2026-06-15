@@ -6,10 +6,6 @@ const DB_NAME = 'restaurant_builder_db';
 const DB_USER = 'root';
 const DB_PASS = '';
 const DB_CHARSET = 'utf8mb4';
-// Temporary local-development guard for admin write requests.
-// Replace this with Core Auth role-based protection later.
-const ADMIN_DEV_WRITES_ENABLED = true;
-const ADMIN_DEV_TOKEN = 'local-dev-admin-token-change-later';
 
 function db(): ?PDO
 {

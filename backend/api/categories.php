@@ -113,7 +113,7 @@ function category_resolved_slug(PDO $pdo, int $restaurantId, array $input, ?int 
 
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 $pdo = require_connection();
-$restaurant = restaurant_context();
+$restaurant = auth_admin_restaurant_context($pdo);
 $restaurantId = (int) $restaurant['restaurant_id'];
 
 if ($method === 'GET') {

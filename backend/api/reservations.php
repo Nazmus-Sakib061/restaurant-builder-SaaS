@@ -39,9 +39,14 @@ function reservation_payload(array $payload): array
 }
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-api_require_write_enabled($method);
 $pdo = require_connection();
-$restaurant = restaurant_context();
+
+if ($method === 'POST') {
+    $restaurant = restaurant_context();
+} else {
+    $restaurant = auth_admin_restaurant_context($pdo);
+}
+
 $restaurantId = (int) $restaurant['restaurant_id'];
 
 if ($method === 'GET') {

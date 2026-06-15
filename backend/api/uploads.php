@@ -94,9 +94,8 @@ if ($method !== 'POST') {
     ], 405);
 }
 
-require_admin_write_access();
-
-$restaurant = restaurant_context();
+$pdo = require_connection();
+$restaurant = auth_admin_restaurant_context($pdo);
 $restaurantId = (int) $restaurant['restaurant_id'];
 $restaurantSlug = (string) $restaurant['slug'];
 $purpose = strtolower(trim((string) ($_POST['purpose'] ?? $_POST['context'] ?? $_POST['type'] ?? 'gallery')));

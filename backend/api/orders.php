@@ -936,10 +936,15 @@ function calculate_order_totals(array $payload, array $items): array
 }
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-api_require_write_enabled($method);
 $pdo = require_connection();
-ensure_order_revenue_schema($pdo);
-$restaurant = restaurant_context();
+
+if ($method === 'POST') {
+    $restaurant = restaurant_context();
+} else {
+    $restaurant = auth_admin_restaurant_context($pdo);
+    ensure_order_revenue_schema($pdo);
+}
+
 $restaurantId = (int) $restaurant['restaurant_id'];
 
 if ($method === 'GET') {
