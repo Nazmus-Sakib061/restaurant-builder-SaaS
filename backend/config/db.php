@@ -11,7 +11,7 @@ if (!defined('DB_HOST')) {
 }
 
 if (!defined('DB_NAME')) {
-    define('DB_NAME', 'restaurant_builder_db');
+    define('DB_NAME', 'restaurant_builder_saas');
 }
 
 if (!defined('DB_USER')) {
