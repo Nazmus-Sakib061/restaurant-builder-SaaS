@@ -56,7 +56,8 @@ When `?restaurant=` is present, the public website loads data from `backend/api/
 - `http://localhost/restaurant_builder/?restaurant=demo-biryani-house`
 
 4. To use the current builder database, import `backend/database/restaurant_builder_schema.sql` first, then `backend/database/restaurant_builder_seed.sql` into phpMyAdmin.
-5. If your local MySQL username or password is different, update `backend/config/db.php`.
+5. If you want to override the local database settings, copy `config.example.php` to `config.php` and edit the credentials.
+   The backend will use `config.php` automatically when it exists, otherwise it falls back to the safe local defaults in `backend/config/db.php`.
 
 ## Admin Demo
 

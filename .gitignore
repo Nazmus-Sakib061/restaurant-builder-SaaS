@@ -1,0 +1,17 @@
+.env
+.env.*
+config.php
+*.log
+logs/
+cache/
+tmp/
+vendor/
+node_modules/
+.DS_Store
+Thumbs.db
+uploads/payment-proofs/
+uploads/invoices/
+uploads/restaurants/
+backend/uploads/payment-proofs/
+backend/uploads/invoices/
+backend/uploads/restaurants/
