@@ -61,13 +61,41 @@ function auth_clear_session(): void
     session_destroy();
 }
 
+function auth_active_restaurant_id(): ?int
+{
+    auth_session_boot();
+
+    return strict_positive_int($_SESSION['auth_user']['active_restaurant_id'] ?? null);
+}
+
+function auth_store_active_restaurant_id(int $restaurantId): void
+{
+    auth_session_boot();
+    $_SESSION['auth_user']['active_restaurant_id'] = $restaurantId;
+}
+
+function auth_normalize_role_value(?string $role): string
+{
+    $normalized = strtolower(trim((string) $role));
+
+    if ($normalized === 'manager') {
+        return 'restaurant_staff';
+    }
+
+    if (in_array($normalized, ['super_admin', 'restaurant_owner', 'restaurant_staff'], true)) {
+        return $normalized;
+    }
+
+    return $normalized !== '' ? $normalized : 'restaurant_owner';
+}
+
 function auth_normalize_user_row(array $row): array
 {
     return [
         'id' => (int) ($row['id'] ?? 0),
         'name' => (string) ($row['name'] ?? ''),
         'email' => (string) ($row['email'] ?? ''),
-        'role' => (string) ($row['role'] ?? 'restaurant_owner'),
+        'role' => auth_normalize_role_value($row['role'] ?? 'restaurant_owner'),
         'status' => (string) ($row['status'] ?? 'active'),
         'created_at' => $row['created_at'] ?? null,
         'updated_at' => $row['updated_at'] ?? null,
@@ -232,7 +260,7 @@ function auth_user_restaurants(PDO $pdo, array $user): array
             'slug' => (string) $restaurant['slug'],
             'business_type' => (string) $restaurant['business_type'],
             'status' => (string) $restaurant['status'],
-            'access_role' => (string) ($restaurant['access_role'] ?? 'restaurant_owner'),
+            'access_role' => auth_normalize_role_value($restaurant['access_role'] ?? 'restaurant_owner'),
         ];
     }, $statement->fetchAll());
 }
@@ -300,10 +328,21 @@ function auth_load_active_restaurant_by_slug(PDO $pdo, string $slug): ?array
 
 function auth_selected_restaurant_identifier(): array
 {
-    $restaurantId = strict_positive_int($_GET['restaurant_id'] ?? $_POST['restaurant_id'] ?? null);
+    $restaurantId = strict_positive_int(
+        $_GET['restaurant_id']
+        ?? $_POST['restaurant_id']
+        ?? $_GET['tenant_id']
+        ?? $_POST['tenant_id']
+        ?? null
+    );
     $restaurantSlug = null;
 
-    if (array_key_exists('restaurant', $_GET) || array_key_exists('restaurant', $_POST)) {
+    if (
+        array_key_exists('tenant', $_GET)
+        || array_key_exists('tenant', $_POST)
+        || array_key_exists('restaurant', $_GET)
+        || array_key_exists('restaurant', $_POST)
+    ) {
         $restaurantSlug = restaurant_requested_slug();
     }
 
@@ -359,7 +398,18 @@ function auth_admin_restaurant_context(PDO $pdo): array
 
         $restaurant = auth_load_active_restaurant_by_slug($pdo, (string) $identifier['restaurant_slug']);
     } else {
-        $restaurant = auth_default_visible_restaurant($pdo, $user);
+        $activeRestaurantId = auth_active_restaurant_id();
+
+        if ($activeRestaurantId !== null) {
+            $activeRestaurant = auth_load_active_restaurant($pdo, $activeRestaurantId);
+            if ($activeRestaurant !== null && auth_user_can_access_restaurant($pdo, $user, $activeRestaurantId)) {
+                $restaurant = $activeRestaurant;
+            }
+        }
+
+        if ($restaurant === null) {
+            $restaurant = auth_default_visible_restaurant($pdo, $user);
+        }
     }
 
     if (!$restaurant) {
@@ -376,15 +426,19 @@ function auth_admin_restaurant_context(PDO $pdo): array
         ], 403);
     }
 
+    auth_store_active_restaurant_id((int) $restaurant['id']);
+
     return auth_format_restaurant_context($restaurant);
 }
 
 function auth_current_user_payload(PDO $pdo): array
 {
     $user = auth_require_login($pdo);
+    $activeRestaurantId = auth_active_restaurant_id();
 
     return [
         'user' => $user,
         'restaurants' => auth_user_restaurants($pdo, $user),
+        'active_restaurant_id' => $activeRestaurantId,
     ];
 }

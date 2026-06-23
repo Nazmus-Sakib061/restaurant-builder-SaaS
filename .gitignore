@@ -1,9 +1,16 @@
 .env
 .env.*
 config.php
+backend/config.php
+backups/
+backups/database/
+*.backup.sql
+*.bak
 *.log
 logs/
+backend/logs/
 cache/
+backend/cache/
 tmp/
 vendor/
 node_modules/

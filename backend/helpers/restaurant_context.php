@@ -3,38 +3,17 @@ declare(strict_types=1);
 
 function restaurant_default_slug(): string
 {
-    return 'demo-pizza-house';
+    return tenant_default_slug();
 }
 
 function restaurant_slug_is_valid(string $slug): bool
 {
-    return (bool) preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug);
+    return tenant_slug_is_valid($slug);
 }
 
 function restaurant_requested_slug(mixed $override = null): string
 {
-    if ($override !== null) {
-        $candidate = trim((string) $override);
-        if ($candidate !== '') {
-            $candidate = function_exists('mb_strtolower') ? mb_strtolower($candidate) : strtolower($candidate);
-            return $candidate;
-        }
-    }
-
-    $requestCandidates = [
-        $_GET['restaurant'] ?? null,
-        $_POST['restaurant'] ?? null,
-    ];
-
-    foreach ($requestCandidates as $candidate) {
-        $candidate = trim((string) $candidate);
-        if ($candidate !== '') {
-            $candidate = function_exists('mb_strtolower') ? mb_strtolower($candidate) : strtolower($candidate);
-            return $candidate;
-        }
-    }
-
-    return restaurant_default_slug();
+    return tenant_requested_slug($override);
 }
 
 function slugify_text(string $value): string

@@ -7,6 +7,7 @@
   const DEFAULT_DEMO = window.RESTAURANT_DEFAULT_PROFILE || "pizza";
   const RESTAURANT_TO_DEMO = {
     "demo-pizza-house": "pizza",
+    "default": "pizza",
     "demo-coffee-house": "coffee",
     "demo-biryani-house": "biryani"
   };
@@ -78,7 +79,7 @@
   };
 
   const fetchRestaurantProfile = async (restaurantSlug) => {
-    const response = await fetch(`backend/api/site-data.php?restaurant=${encodeURIComponent(restaurantSlug)}`, {
+    const response = await fetch(`backend/api/site-data.php?tenant=${encodeURIComponent(restaurantSlug)}`, {
       headers: { Accept: "application/json" }
     });
 
@@ -189,9 +190,9 @@
 
   async function loadRestaurantWebsite() {
     const params = new URLSearchParams(window.location.search);
-    const restaurantSlug = params.get("restaurant");
+    const restaurantSlug = params.get("tenant") || params.get("restaurant");
     const demoKey = (params.get("demo") || DEFAULT_DEMO).toLowerCase();
-    const mappedRestaurantSlug = DEMO_TO_RESTAURANT[demoKey] || DEMO_TO_RESTAURANT[DEFAULT_DEMO] || "demo-pizza-house";
+    const mappedRestaurantSlug = DEMO_TO_RESTAURANT[demoKey] || DEMO_TO_RESTAURANT[DEFAULT_DEMO] || "default";
     const requestedRestaurantSlug = String(restaurantSlug || "").trim();
 
     if (requestedRestaurantSlug) {

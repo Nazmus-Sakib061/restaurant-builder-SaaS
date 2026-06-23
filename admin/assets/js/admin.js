@@ -1,5 +1,6 @@
 ﻿const ordersKey = "demoRestaurantOrders";
 const selectedRestaurantKey = "demoRestaurantSelectedSlug";
+const DEFAULT_RESTAURANT_SLUG = window.RESTAURANT_DEFAULT_SLUG || "default";
 const apiBase = "../backend/api";
 const loginPageUrl = "login.php";
 const dashboardPageUrl = "dashboard.php";
@@ -764,7 +765,7 @@ const renderOrderPaymentControl = (order) => {
 };
 
 const loadRevenueSummaryForRestaurant = async (slug) => {
-  const resolvedSlug = slug || "demo-pizza-house";
+  const resolvedSlug = slug || DEFAULT_RESTAURANT_SLUG;
 
   if (currentOrdersSource === "localStorage") {
     setRevenueTotal(computeRevenueTotal(currentOrders));
@@ -788,7 +789,7 @@ const loadRevenueSummaryForRestaurant = async (slug) => {
 };
 
 const loadOrdersForRestaurant = async (slug) => {
-  const resolvedSlug = slug || "demo-pizza-house";
+  const resolvedSlug = slug || DEFAULT_RESTAURANT_SLUG;
 
   try {
     const result = await fetchJson("orders.php", {
@@ -853,7 +854,7 @@ const updateOrderStatus = async (orderId, nextStatus, selectElement) => {
   try {
     const result = await fetchJson("orders.php", {
       method: "PUT",
-      params: { restaurant: restaurantSelect?.value || currentRestaurant?.slug || "demo-pizza-house" },
+      params: { restaurant: restaurantSelect?.value || currentRestaurant?.slug || DEFAULT_RESTAURANT_SLUG },
       body: {
         action: "update_status",
         id: orderId,
@@ -932,7 +933,7 @@ const updateOrderCashReceived = async (orderId, buttonElement) => {
     const result = await fetchJson("orders.php", {
       method: "PUT",
       params: {
-        restaurant: restaurantSelect?.value || currentRestaurant?.slug || "demo-pizza-house"
+        restaurant: restaurantSelect?.value || currentRestaurant?.slug || DEFAULT_RESTAURANT_SLUG
       },
       body: {
         action: "cash_received",
@@ -1307,7 +1308,7 @@ const renderSettingsSummary = () => {
   const restaurant = currentRestaurant || {
     id: 0,
     name: "Restaurant",
-    slug: "demo-pizza-house",
+    slug: DEFAULT_RESTAURANT_SLUG,
     business_type: "restaurant"
   };
   const settings = currentSettings || {};
@@ -1319,7 +1320,7 @@ const renderSettingsSummary = () => {
     </div>
     <div class="settings-item">
       <dt>Slug</dt>
-      <dd>${escapeHTML(restaurant.slug || "demo-pizza-house")}</dd>
+      <dd>${escapeHTML(restaurant.slug || DEFAULT_RESTAURANT_SLUG)}</dd>
     </div>
     <div class="settings-item">
       <dt>Business Type</dt>
@@ -1351,7 +1352,7 @@ const updatePublicPreviewLink = (slug) => {
     return;
   }
 
-  publicPreviewLink.href = `../index.html?restaurant=${encodeURIComponent(resolvedSlug)}`;
+  publicPreviewLink.href = `../index.html?tenant=${encodeURIComponent(resolvedSlug)}`;
 };
 
 const populateRestaurantSelect = (restaurants, preferredSlug = "") => {
@@ -1379,7 +1380,7 @@ const populateRestaurantSelect = (restaurants, preferredSlug = "") => {
     restaurantSelect.appendChild(option);
   });
 
-  const fallbackSlug = restaurants[0]?.slug || "demo-pizza-house";
+  const fallbackSlug = restaurants[0]?.slug || DEFAULT_RESTAURANT_SLUG;
   const resolvedSlug = restaurants.some((restaurant) => restaurant.slug === preferredSlug) ? preferredSlug : fallbackSlug;
   restaurantSelect.value = resolvedSlug;
   window.localStorage.setItem(selectedRestaurantKey, resolvedSlug);
@@ -1519,7 +1520,7 @@ const focusFirstSettingsField = (errors) => {
 };
 
 const loadSettingsForRestaurant = async (slug) => {
-  const resolvedSlug = slug || "demo-pizza-house";
+  const resolvedSlug = slug || DEFAULT_RESTAURANT_SLUG;
 
   if (settingsFeedback) {
     showSettingsFeedback(`Loading ${resolvedSlug} settings...`);
@@ -1558,7 +1559,7 @@ const loadRestaurants = async () => {
     return;
   }
 
-  const preferredSlug = window.localStorage.getItem(selectedRestaurantKey) || "demo-pizza-house";
+  const preferredSlug = window.localStorage.getItem(selectedRestaurantKey) || DEFAULT_RESTAURANT_SLUG;
 
   try {
     const result = await fetchJson("restaurants.php");
@@ -1601,7 +1602,7 @@ const saveSettings = async (event) => {
     return;
   }
 
-  const selectedSlug = restaurantSelect.value || "demo-pizza-house";
+  const selectedSlug = restaurantSelect.value || DEFAULT_RESTAURANT_SLUG;
 
   setButtonLoading(true);
 
@@ -2220,7 +2221,7 @@ const renderDeals = () => {
 };
 
 const loadDealsForRestaurant = async (slug) => {
-  const resolvedSlug = slug || "demo-pizza-house";
+  const resolvedSlug = slug || DEFAULT_RESTAURANT_SLUG;
   try {
     const result = await fetchJson("deals.php", {
       params: { restaurant: resolvedSlug, include_inactive: 1 },
@@ -2244,7 +2245,7 @@ const saveDeal = async (event) => {
     return;
   }
 
-  const selectedSlug = restaurantSelect.value || "demo-pizza-house";
+  const selectedSlug = restaurantSelect.value || DEFAULT_RESTAURANT_SLUG;
 
   setDealButtonLoading(true);
 
@@ -2322,7 +2323,7 @@ const deleteDeal = async (id) => {
     return;
   }
 
-  const selectedSlug = restaurantSelect?.value || "demo-pizza-house";
+  const selectedSlug = restaurantSelect?.value || DEFAULT_RESTAURANT_SLUG;
   setDealButtonLoading(true);
   showDealFeedback("Deleting deal...");
 
@@ -2608,7 +2609,7 @@ const uploadRestaurantImage = async ({
     return reportError("Image must be 3 MB or smaller.");
   }
 
-  const selectedSlug = restaurantSelect.value || "demo-pizza-house";
+  const selectedSlug = restaurantSelect.value || DEFAULT_RESTAURANT_SLUG;
   const formData = new FormData();
   formData.append("image", file);
   formData.append("purpose", purpose);
@@ -2946,7 +2947,7 @@ const renderGallery = () => {
 };
 
 const loadGalleryForRestaurant = async (slug) => {
-  const resolvedSlug = slug || "demo-pizza-house";
+  const resolvedSlug = slug || DEFAULT_RESTAURANT_SLUG;
   try {
     const result = await fetchJson("gallery.php", {
       params: { restaurant: resolvedSlug, include_inactive: 1 },
@@ -2970,7 +2971,7 @@ const saveGallery = async (event) => {
     return;
   }
 
-  const selectedSlug = restaurantSelect.value || "demo-pizza-house";
+  const selectedSlug = restaurantSelect.value || DEFAULT_RESTAURANT_SLUG;
   const payload = getGalleryFormPayload();
   const selectedFile = galleryUploadField?.files?.[0] || null;
   const hasExistingImage = String(payload.image || "").trim() !== "";
@@ -3064,7 +3065,7 @@ const deleteGallery = async (id) => {
     return;
   }
 
-  const selectedSlug = restaurantSelect?.value || "demo-pizza-house";
+  const selectedSlug = restaurantSelect?.value || DEFAULT_RESTAURANT_SLUG;
   setGalleryButtonLoading(true);
   showGalleryFeedback("Deleting gallery item...");
 
@@ -3140,7 +3141,7 @@ const renderMenuItems = () => {
 };
 
 const loadCategoriesForRestaurant = async (slug) => {
-  const resolvedSlug = slug || "demo-pizza-house";
+  const resolvedSlug = slug || DEFAULT_RESTAURANT_SLUG;
   try {
     const result = await fetchJson("categories.php", {
       params: { restaurant: resolvedSlug },
@@ -3164,7 +3165,7 @@ const loadCategoriesForRestaurant = async (slug) => {
 };
 
 const loadMenuItemsForRestaurant = async (slug) => {
-  const resolvedSlug = slug || "demo-pizza-house";
+  const resolvedSlug = slug || DEFAULT_RESTAURANT_SLUG;
   try {
     const result = await fetchJson("menu-items.php", {
       params: { restaurant: resolvedSlug },
@@ -3184,7 +3185,7 @@ const loadMenuItemsForRestaurant = async (slug) => {
 };
 
 const refreshRestaurantCrudData = async (slug) => {
-  const resolvedSlug = slug || restaurantSelect?.value || "demo-pizza-house";
+  const resolvedSlug = slug || restaurantSelect?.value || DEFAULT_RESTAURANT_SLUG;
   await loadCategoriesForRestaurant(resolvedSlug);
   await loadMenuItemsForRestaurant(resolvedSlug);
   await loadDealsForRestaurant(resolvedSlug);
@@ -3199,7 +3200,7 @@ const saveCategory = async (event) => {
     return;
   }
 
-  const selectedSlug = restaurantSelect.value || "demo-pizza-house";
+  const selectedSlug = restaurantSelect.value || DEFAULT_RESTAURANT_SLUG;
 
   setCategoryButtonLoading(true);
 
@@ -3256,7 +3257,7 @@ const saveMenuItem = async (event) => {
     return;
   }
 
-  const selectedSlug = restaurantSelect.value || "demo-pizza-house";
+  const selectedSlug = restaurantSelect.value || DEFAULT_RESTAURANT_SLUG;
 
   setMenuItemButtonLoading(true);
 
@@ -3335,7 +3336,7 @@ const deleteCategory = async (id) => {
     return;
   }
 
-  const selectedSlug = restaurantSelect?.value || "demo-pizza-house";
+  const selectedSlug = restaurantSelect?.value || DEFAULT_RESTAURANT_SLUG;
   setCategoryButtonLoading(true);
   showCategoryFeedback("Deleting category...");
 
@@ -3388,7 +3389,7 @@ const deleteMenuItem = async (id) => {
     return;
   }
 
-  const selectedSlug = restaurantSelect?.value || "demo-pizza-house";
+  const selectedSlug = restaurantSelect?.value || DEFAULT_RESTAURANT_SLUG;
   setMenuItemButtonLoading(true);
   showMenuItemFeedback("Deleting menu item...");
 

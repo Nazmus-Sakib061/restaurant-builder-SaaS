@@ -1,10 +1,10 @@
 # Restaurant Builder Backend
 
-This backend is built for the `restaurant_builder_db` schema and supports multi-restaurant APIs using the `?restaurant=` slug parameter.
+This backend is built for the `restaurant_builder_saas` schema and supports tenant-aware APIs using the `?tenant=` slug parameter.
 
 ## Database
 
-- Database name: `restaurant_builder_db`
+- Database name: `restaurant_builder_saas`
 - Charset: `utf8mb4`
 - Import order:
   1. `backend/database/restaurant_builder_schema.sql`
@@ -14,11 +14,13 @@ This backend is built for the `restaurant_builder_db` schema and supports multi-
 
 Most APIs resolve the active restaurant from:
 
-`?restaurant=demo-pizza-house`
+`?tenant=default`
 
 If the parameter is missing, the backend defaults to:
 
-`demo-pizza-house`
+`default`
+
+Legacy restaurant URLs are still supported as compatibility aliases, for example `?restaurant=demo-pizza-house`.
 
 Only active restaurants are returned by the shared context helper.
 
@@ -133,15 +135,16 @@ Several resources use soft delete by updating `status` to `inactive`:
 
 ## Public demo slugs
 
+- `default`
 - `demo-pizza-house`
 - `demo-coffee-house`
 - `demo-biryani-house`
 
 ## Quick test URLs
 
-- `http://localhost/restaurant_builder/backend/api/site-data.php?restaurant=demo-pizza-house`
+- `http://localhost/restaurant_builder_SaaS/backend/api/site-data.php?tenant=default`
 - `http://localhost/restaurant_builder/admin/login.php`
-- `http://localhost/restaurant_builder/backend/api/current-user.php`
+- `http://localhost/restaurant_builder_SaaS/backend/api/current-user.php`
 
 Repeat the same URLs with:
 

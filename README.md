@@ -1,11 +1,11 @@
-# Restaurant Builder Demo
+# Restaurant Builder SaaS Demo
 
-A premium single-page restaurant website built for `localhost` with a dark luxury restaurant look, online menu filtering, deal cards, contact/order form validation, and backend-ready PHP/MySQL structure.
+A premium restaurant website and admin demo built for `localhost` with a dark luxury restaurant look, tenant-aware menu filtering, deal cards, contact/order form validation, and backend-ready PHP/MySQL structure.
 
 ## Project Structure
 
 ```text
-restaurant_builder/
+restaurant_builder_SaaS/
 ├── index.html
 ├── README.md
 ├── assets/
@@ -34,10 +34,10 @@ restaurant_builder/
 ## How To Run In XAMPP
 
 1. Copy or keep the project folder here:
-   `C:\xampp\htdocs\restaurant_builder`
+   `C:\xampp\htdocs\restaurant_builder_SaaS`
 2. Start **Apache** and **MySQL** from XAMPP.
 3. Open the homepage in your browser:
-   `http://localhost/restaurant_builder/`
+   `http://localhost/restaurant_builder_SaaS/`
 
 ### Demo Profiles
 
@@ -49,11 +49,11 @@ Switch the restaurant profile by adding `?demo=` to the URL:
 
 ### Database API Profiles
 
-When `?restaurant=` is present, the public website loads data from `backend/api/site-data.php` and falls back to the local demo profile if the API is unavailable:
+When `?tenant=` is present, the public website loads data from `backend/api/site-data.php` and falls back to the local demo profile if the API is unavailable:
 
-- `http://localhost/restaurant_builder/?restaurant=demo-pizza-house`
-- `http://localhost/restaurant_builder/?restaurant=demo-coffee-house`
-- `http://localhost/restaurant_builder/?restaurant=demo-biryani-house`
+- `http://localhost/restaurant_builder_SaaS/?tenant=default`
+- `http://localhost/restaurant_builder_SaaS/?tenant=demo-coffee-house`
+- `http://localhost/restaurant_builder_SaaS/?tenant=demo-biryani-house`
 
 4. To use the current builder database, import `backend/database/restaurant_builder_schema.sql` first, then `backend/database/restaurant_builder_seed.sql` into phpMyAdmin.
 5. If you want to override the local database settings, copy `config.example.php` to `config.php` and edit the credentials.
@@ -77,7 +77,7 @@ Use the demo login: `admin` / `123456`.
 - About section with image collage
 - Contact/order form validation
 - Backend-ready PHP API structure
-- MySQL schema for multi-restaurant settings, categories, menu items, deals, gallery, orders, and reservations
+- MySQL schema for multi-tenant settings, categories, menu items, deals, gallery, orders, and reservations
 
 ## Image Performance Guidelines
 
