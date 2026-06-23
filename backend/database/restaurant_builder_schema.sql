@@ -1,8 +1,8 @@
-CREATE DATABASE IF NOT EXISTS restaurant_builder_db
+CREATE DATABASE IF NOT EXISTS restaurant_builder_saas
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE restaurant_builder_db;
+USE restaurant_builder_saas;
 
 -- Development reset section. Do not use on production without backup.
 SET FOREIGN_KEY_CHECKS = 0;

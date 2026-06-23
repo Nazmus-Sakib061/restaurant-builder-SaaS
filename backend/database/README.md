@@ -4,7 +4,7 @@ This folder contains the MySQL files for the SaaS-ready multi-tenant database us
 
 ## Database Name
 
-- `restaurant_builder_db`
+- `restaurant_builder_saas`
 
 ## Import Order
 
@@ -27,11 +27,11 @@ The seed file inserts the demo restaurants, settings, menu content, deals, galle
 
 1. Start **Apache** and **MySQL** in XAMPP.
 2. Open phpMyAdmin.
-3. Create or select the database `restaurant_builder_db`.
+3. Create or select the database `restaurant_builder_saas`.
 4. Import `restaurant_builder_schema.sql`.
 5. Import `restaurant_builder_seed.sql`.
 
-If you prefer the SQL scripts to create the database automatically, you can import the schema file first and let it create `restaurant_builder_db` for you.
+If you prefer the SQL scripts to create the database automatically, you can import the schema file first and let it create `restaurant_builder_saas` for you.
 
 ## Multi-Tenant Notes
 
@@ -39,7 +39,7 @@ If you prefer the SQL scripts to create the database automatically, you can impo
 - `restaurant_users` maps a user to the restaurants they can manage.
 - `restaurant_id` is the tenant boundary.
 - Every restaurant-specific table uses `restaurant_id` so each restaurant can keep its own menu, settings, orders, reservations, and deals.
-- `slug` is the URL-safe unique identifier used for lookups such as `demo-pizza-house` or `family-pizza-combo`.
+- `slug` is the URL-safe unique identifier used for lookups such as `default`, `demo-pizza-house`, or `family-pizza-combo`.
 - `theme_presets` stores reusable design palettes so different restaurant types can switch visual themes without changing the frontend code.
 
 ## Auth Foundation

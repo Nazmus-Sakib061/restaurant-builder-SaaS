@@ -536,7 +536,7 @@ if (!$pdo instanceof PDO || auth_current_user($pdo) === null) {
               <span class="panel__eyebrow">Settings</span>
               <h2>Website Settings</h2>
             </div>
-            <a class="btn btn--ghost btn--compact" id="publicPreviewLink" href="../index.html?restaurant=demo-pizza-house" target="_blank" rel="noopener noreferrer">
+            <a class="btn btn--ghost btn--compact" id="publicPreviewLink" href="../index.html?tenant=default" target="_blank" rel="noopener noreferrer">
               Open Public Site
             </a>
           </div>
@@ -545,7 +545,7 @@ if (!$pdo instanceof PDO || auth_current_user($pdo) === null) {
               <div class="form-group">
                 <label for="restaurantSelect">Restaurant</label>
                 <select id="restaurantSelect" class="field-control" name="restaurant_slug">
-                  <option value="demo-pizza-house">Demo Pizza House</option>
+                  <option value="default">Default Restaurant</option>
                 </select>
               </div>
               <p class="settings-feedback" id="settingsFeedback" aria-live="polite"></p>

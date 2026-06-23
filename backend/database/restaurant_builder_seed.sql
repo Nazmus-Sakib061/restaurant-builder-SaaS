@@ -1,4 +1,4 @@
-USE restaurant_builder_db;
+USE restaurant_builder_saas;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -87,8 +87,8 @@ INSERT INTO restaurants (
   subscription_status,
   trial_ends_at
 ) VALUES (
-  'Demo Pizza House',
-  'demo-pizza-house',
+  'Default Restaurant',
+  'default',
   'pizza',
   'Demo Owner',
   'hello@pizzahouse.demo',
@@ -144,13 +144,13 @@ INSERT INTO restaurant_settings (
   @pizza_restaurant_id,
   NULL,
   NULL,
-  'Demo Pizza House',
+  'Default Restaurant',
   'Best Food in Your Town',
   'Dark luxury pizza-house style with hot pizzas, juicy burgers, and fresh drinks.',
   'Order Now',
   '#contact',
   'images/hero image.png',
-  'About Demo Pizza House',
+  'About Default Restaurant',
   'Freshly baked pizzas, smoky burgers, and late-night combo meals crafted for local food lovers.',
   'images/Pizza/pizza 1.png',
   '+880 1712 345 678',
