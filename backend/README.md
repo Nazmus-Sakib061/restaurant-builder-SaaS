@@ -55,6 +55,12 @@ Common response helpers live in `backend/api/_response.php`.
 
 - `backend/api/current-user.php`
   - `GET` current session user payload
+  - returns `user`, `active_restaurant`, `restaurants`, `session.active_restaurant_id`, and `active_restaurant_id`
+
+- `backend/api/select-restaurant.php`
+  - `POST` safely change the active restaurant for the logged-in admin session
+  - accepts `restaurant_id` or a restaurant slug
+  - checks restaurant access before updating the session
 
 ## API endpoints
 

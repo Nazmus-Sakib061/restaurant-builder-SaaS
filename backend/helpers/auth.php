@@ -78,8 +78,16 @@ function auth_normalize_role_value(?string $role): string
 {
     $normalized = strtolower(trim((string) $role));
 
-    if ($normalized === 'manager') {
+    if (in_array($normalized, ['manager', 'staff'], true)) {
         return 'restaurant_staff';
+    }
+
+    if ($normalized === 'owner') {
+        return 'restaurant_owner';
+    }
+
+    if ($normalized === 'admin') {
+        return 'super_admin';
     }
 
     if (in_array($normalized, ['super_admin', 'restaurant_owner', 'restaurant_staff'], true)) {
@@ -87,6 +95,35 @@ function auth_normalize_role_value(?string $role): string
     }
 
     return $normalized !== '' ? $normalized : 'restaurant_owner';
+}
+
+function auth_role_profile(?string $role): array
+{
+    $rawRole = strtolower(trim((string) $role));
+    $normalizedRole = auth_normalize_role_value($rawRole);
+
+    return [
+        'role' => $rawRole !== '' ? $rawRole : $normalizedRole,
+        'normalized_role' => $normalizedRole,
+        'is_super_admin' => $normalizedRole === 'super_admin',
+        'is_restaurant_owner' => $normalizedRole === 'restaurant_owner',
+        'is_restaurant_staff' => $normalizedRole === 'restaurant_staff',
+    ];
+}
+
+function auth_role_is_super_admin(?string $role): bool
+{
+    return auth_role_profile($role)['is_super_admin'];
+}
+
+function auth_role_is_restaurant_owner(?string $role): bool
+{
+    return auth_role_profile($role)['is_restaurant_owner'];
+}
+
+function auth_role_is_restaurant_staff(?string $role): bool
+{
+    return auth_role_profile($role)['is_restaurant_staff'];
 }
 
 function auth_normalize_user_row(array $row): array
@@ -207,7 +244,7 @@ function auth_user_restaurants(PDO $pdo, array $user): array
         return [];
     }
 
-    if (($user['role'] ?? '') === 'super_admin') {
+    if (auth_role_is_super_admin($user['role'] ?? null)) {
         $statement = $pdo->prepare(
             'SELECT id, name, slug, business_type, status
              FROM restaurants
@@ -267,7 +304,7 @@ function auth_user_restaurants(PDO $pdo, array $user): array
 
 function auth_user_can_access_restaurant(PDO $pdo, array $user, int $restaurantId): bool
 {
-    if (($user['role'] ?? '') === 'super_admin') {
+    if (auth_role_is_super_admin($user['role'] ?? null)) {
         return true;
     }
 
@@ -434,11 +471,38 @@ function auth_admin_restaurant_context(PDO $pdo): array
 function auth_current_user_payload(PDO $pdo): array
 {
     $user = auth_require_login($pdo);
+    $rawUserRow = auth_user_row_by_id($pdo, (int) $user['id']);
     $activeRestaurantId = auth_active_restaurant_id();
+    $roleProfile = auth_role_profile((string) ($rawUserRow['role'] ?? $user['role'] ?? ''));
+    $activeRestaurant = null;
+    if ($activeRestaurantId !== null && auth_user_can_access_restaurant($pdo, $user, $activeRestaurantId)) {
+        $activeRestaurantRow = auth_load_active_restaurant($pdo, $activeRestaurantId);
+        if ($activeRestaurantRow !== null) {
+            $activeRestaurant = [
+                'id' => (int) $activeRestaurantRow['id'],
+                'name' => (string) $activeRestaurantRow['name'],
+                'slug' => (string) $activeRestaurantRow['slug'],
+                'status' => (string) $activeRestaurantRow['status'],
+            ];
+        }
+    }
 
     return [
-        'user' => $user,
+        'user' => [
+            'id' => (int) ($rawUserRow['id'] ?? $user['id'] ?? 0),
+            'email' => (string) ($rawUserRow['email'] ?? $user['email'] ?? ''),
+            'name' => (string) ($rawUserRow['name'] ?? $user['name'] ?? ''),
+            'role' => (string) $roleProfile['role'],
+            'normalized_role' => (string) $roleProfile['normalized_role'],
+            'is_super_admin' => (bool) $roleProfile['is_super_admin'],
+            'is_restaurant_owner' => (bool) $roleProfile['is_restaurant_owner'],
+            'is_restaurant_staff' => (bool) $roleProfile['is_restaurant_staff'],
+        ],
+        'active_restaurant' => $activeRestaurant,
         'restaurants' => auth_user_restaurants($pdo, $user),
+        'session' => [
+            'active_restaurant_id' => $activeRestaurantId,
+        ],
         'active_restaurant_id' => $activeRestaurantId,
     ];
 }

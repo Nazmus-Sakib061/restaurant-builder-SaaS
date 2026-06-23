@@ -72,7 +72,12 @@ if (!$pdo instanceof PDO || auth_current_user($pdo) === null) {
         </div>
 
         <div class="admin-topbar__right">
-          <span class="status-pill status-pill--live">Live demo</span>
+          <div class="admin-context" id="activeRestaurantContext" aria-live="polite">
+            <span class="admin-context__label">Current Restaurant</span>
+            <strong id="activeRestaurantName">Loading context...</strong>
+            <small id="activeRestaurantMeta">Waiting for session state</small>
+          </div>
+          <span class="status-pill status-pill--live">Tenant-aware</span>
           <button type="button" class="btn btn--ghost btn--compact" data-action="logout">Logout</button>
         </div>
       </header>
@@ -543,7 +548,7 @@ if (!$pdo instanceof PDO || auth_current_user($pdo) === null) {
           <div class="settings-panel">
             <div class="settings-toolbar">
               <div class="form-group">
-                <label for="restaurantSelect">Restaurant</label>
+                <label for="restaurantSelect">Active Restaurant</label>
                 <select id="restaurantSelect" class="field-control" name="restaurant_slug">
                   <option value="default">Default Restaurant</option>
                 </select>

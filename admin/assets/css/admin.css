@@ -422,6 +422,36 @@ button {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-context {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 14rem;
+  padding: 0.72rem 0.95rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-context__label {
+  color: #ffd49d;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-context strong {
+  font-size: 0.98rem;
+  letter-spacing: 0.02em;
+}
+
+.admin-context small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .status-pill {
@@ -1312,6 +1342,11 @@ button {
   .admin-topbar__right {
     justify-content: space-between;
     flex-wrap: wrap;
+  }
+
+  .admin-context {
+    width: 100%;
+    min-width: 0;
   }
 
   .settings-item {

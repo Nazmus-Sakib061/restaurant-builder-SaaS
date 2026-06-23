@@ -24,6 +24,9 @@ const restaurantSelect = document.getElementById("restaurantSelect");
 const settingsForm = document.getElementById("settingsForm");
 const settingsFeedback = document.getElementById("settingsFeedback");
 const settingsSaveButton = document.getElementById("settingsSaveButton");
+const activeRestaurantContext = document.getElementById("activeRestaurantContext");
+const activeRestaurantName = document.getElementById("activeRestaurantName");
+const activeRestaurantMeta = document.getElementById("activeRestaurantMeta");
 const logoPathField = document.getElementById("logoPath");
 const logoUploadField = document.getElementById("logoUploadField");
 const logoUploadButton = document.getElementById("logoUploadButton");
@@ -228,6 +231,7 @@ const urlLikeFieldNames = [
 ];
 
 let loadedRestaurants = [];
+let currentUserContext = null;
 let currentRestaurant = null;
 let currentSettings = null;
 let currentCategories = [];
@@ -1355,6 +1359,62 @@ const updatePublicPreviewLink = (slug) => {
   publicPreviewLink.href = `../index.html?tenant=${encodeURIComponent(resolvedSlug)}`;
 };
 
+const renderActiveRestaurantContext = (context = null) => {
+  const activeRestaurant = context?.active_restaurant || null;
+  const user = context?.user || null;
+  const sessionId = context?.session?.active_restaurant_id ?? context?.active_restaurant_id ?? null;
+
+  if (activeRestaurantName) {
+    activeRestaurantName.textContent = activeRestaurant?.name || "No restaurant selected";
+  }
+
+  if (activeRestaurantMeta) {
+    const metaParts = [];
+    if (user?.email) {
+      metaParts.push(user.email);
+    }
+    if (user?.normalized_role) {
+      metaParts.push(String(user.normalized_role).replace(/_/g, " "));
+    }
+    if (activeRestaurant?.slug) {
+      metaParts.push(`tenant: ${activeRestaurant.slug}`);
+    } else {
+      metaParts.push("Select a restaurant to continue");
+    }
+    if (sessionId) {
+      metaParts.push(`session id: ${sessionId}`);
+    }
+
+    activeRestaurantMeta.textContent = metaParts.join(" · ");
+  }
+
+  if (activeRestaurantContext) {
+    activeRestaurantContext.dataset.state = activeRestaurant ? "active" : "empty";
+  }
+};
+
+const syncTenantContext = async (slug = "") => {
+  const result = await fetchJson("select-restaurant.php", {
+    method: "POST",
+    body: {
+      restaurant_slug: slug
+    }
+  });
+
+  currentUserContext = result.data || currentUserContext;
+  loadedRestaurants = Array.isArray(currentUserContext?.restaurants) ? currentUserContext.restaurants : loadedRestaurants;
+  renderActiveRestaurantContext(currentUserContext);
+  return currentUserContext;
+};
+
+const loadCurrentUserContext = async () => {
+  const result = await fetchJson("current-user.php");
+  currentUserContext = result.data || null;
+  loadedRestaurants = Array.isArray(currentUserContext?.restaurants) ? currentUserContext.restaurants : [];
+  renderActiveRestaurantContext(currentUserContext);
+  return currentUserContext;
+};
+
 const populateRestaurantSelect = (restaurants, preferredSlug = "") => {
   if (!restaurantSelect) {
     return;
@@ -1562,9 +1622,10 @@ const loadRestaurants = async () => {
   const preferredSlug = window.localStorage.getItem(selectedRestaurantKey) || DEFAULT_RESTAURANT_SLUG;
 
   try {
-    const result = await fetchJson("restaurants.php");
+    const context = await loadCurrentUserContext();
+    const restaurants = Array.isArray(context?.restaurants) ? context.restaurants : [];
 
-    if (!Array.isArray(result.data) || !result.data.length) {
+    if (!restaurants.length) {
       loadedRestaurants = [];
       populateRestaurantSelect([], preferredSlug);
       showSettingsFeedback("No restaurants are assigned to this account.", "error");
@@ -1572,9 +1633,16 @@ const loadRestaurants = async () => {
       return;
     }
 
-    loadedRestaurants = result.data;
-    populateRestaurantSelect(loadedRestaurants, preferredSlug);
-    const selectedSlug = restaurantSelect.value || loadedRestaurants[0].slug;
+    loadedRestaurants = restaurants;
+    const activeSlug = context?.active_restaurant?.slug || "";
+    const resolvedPreferredSlug = activeSlug || preferredSlug;
+    populateRestaurantSelect(loadedRestaurants, resolvedPreferredSlug);
+
+    const selectedSlug = restaurantSelect.value || resolvedPreferredSlug || loadedRestaurants[0].slug;
+    if (!context?.active_restaurant || context.active_restaurant.slug !== selectedSlug) {
+      await syncTenantContext(selectedSlug);
+    }
+
     await loadSettingsForRestaurant(selectedSlug);
     await loadCategoriesForRestaurant(selectedSlug);
     await loadMenuItemsForRestaurant(selectedSlug);
@@ -3525,18 +3593,35 @@ if (settingsForm && restaurantSelect) {
   settingsForm.addEventListener("submit", saveSettings);
   restaurantSelect.addEventListener("change", (event) => {
     const nextSlug = event.target.value;
-    window.localStorage.setItem(selectedRestaurantKey, nextSlug);
-    updatePublicPreviewLink(nextSlug);
-    resetCategoryForm();
-    resetMenuItemForm();
-    resetDealForm();
-    resetGalleryForm();
-    loadSettingsForRestaurant(nextSlug);
-    loadCategoriesForRestaurant(nextSlug);
-    loadMenuItemsForRestaurant(nextSlug);
-    loadDealsForRestaurant(nextSlug);
-    loadGalleryForRestaurant(nextSlug);
-    loadOrdersForRestaurant(nextSlug);
+    showSettingsFeedback(`Switching to ${nextSlug}...`);
+    void (async () => {
+      try {
+        await syncTenantContext(nextSlug);
+        window.localStorage.setItem(selectedRestaurantKey, nextSlug);
+        updatePublicPreviewLink(nextSlug);
+        resetCategoryForm();
+        resetMenuItemForm();
+        resetDealForm();
+        resetGalleryForm();
+        await loadSettingsForRestaurant(nextSlug);
+        await loadCategoriesForRestaurant(nextSlug);
+        await loadMenuItemsForRestaurant(nextSlug);
+        await loadDealsForRestaurant(nextSlug);
+        await loadGalleryForRestaurant(nextSlug);
+        await loadOrdersForRestaurant(nextSlug);
+        showSettingsFeedback(`Switched to ${currentRestaurant?.name || nextSlug}.`);
+        showAdminToast(`Switched to ${currentRestaurant?.name || nextSlug}.`);
+      } catch (error) {
+        const message = error.message || "Unable to switch restaurants.";
+        const fallbackSlug = currentUserContext?.active_restaurant?.slug || loadedRestaurants[0]?.slug || "";
+        if (restaurantSelect && fallbackSlug) {
+          restaurantSelect.value = fallbackSlug;
+          updatePublicPreviewLink(fallbackSlug);
+        }
+        showSettingsFeedback(message, "error");
+        showAdminToast(message, "error");
+      }
+    })();
   });
 }
 
