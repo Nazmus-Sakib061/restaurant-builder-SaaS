@@ -70,7 +70,7 @@ This keeps public and admin tenant resolution centralized.
 ## 8. Limitations
 
 - Billing, invoices, plans, and subscription automation are still out of scope.
-- `restaurant_users.role` still uses the existing `manager` label in the schema; `restaurant_staff` remains a future cleanup.
+- `restaurant_users.role` still uses the existing schema labels; runtime helpers normalize `manager`, `staff`, `owner`, and `admin` into the SaaS role set.
 - There is no dedicated statistics API endpoint in the repo; current statistics remain embedded in the orders flow and are restaurant-scoped.
 - Front-end demo fallback data still exists as a compatibility path.
 
@@ -93,6 +93,7 @@ Suggested focus:
 - Admin fallback logic was centralized to a single default tenant slug constant instead of hardcoded `demo-pizza-house` fallbacks.
 - Public compatibility aliases remain in place so legacy URLs still resolve during the transition.
 - `manager` is now normalized at runtime to `restaurant_staff` while preserving schema compatibility.
+- `owner` normalizes to `restaurant_owner`, `staff` normalizes to `restaurant_staff`, and `admin` normalizes to `super_admin` where the broader legacy role needs to map into the SaaS model.
 
 ## 11. Tenant-Owned Table Verification
 
@@ -135,6 +136,13 @@ Temporary records were deleted after verification.
 ## 13. Remaining Risks
 
 - `assets/js/apiDataLoader.js` still contains a compatibility alias for legacy demo slugs in the public fallback path.
-- The schema still stores the role label `manager`; the runtime now maps it to `restaurant_staff`.
+- The schema still stores legacy role labels in a few places; the runtime mapping now keeps the SaaS role surface consistent.
 - There is still no dedicated statistics API endpoint, so reporting remains embedded in the orders flow.
 - Full browser-automation coverage was not run in this cleanup pass.
+
+## 14. Migration Hardening Note
+
+- Future tenant migrations should avoid hard-coded `restaurant_id = 1` assumptions.
+- Prefer slug-based lookup for the default tenant, for example:
+  - `SELECT id FROM restaurants WHERE slug = 'default' LIMIT 1`
+- The current migration is intentionally update-only and does not drop existing data.
