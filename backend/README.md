@@ -66,6 +66,13 @@ Common response helpers live in `backend/api/_response.php`.
 
 - `backend/api/restaurants.php`
   - `GET` restaurants visible to the logged-in user
+  - `POST` super-admin restaurant creation
+  - `PATCH` / `PUT` / `DELETE` super-admin restaurant maintenance
+
+- `backend/api/restaurant-owners.php`
+  - `GET` super-admin owner assignment overview
+  - `POST` super-admin owner creation and assignment
+  - accepts active or inactive restaurants for super-admin onboarding, while tenant switching remains restricted by `select-restaurant.php`
 
 - `backend/api/settings.php`
   - `GET` current restaurant settings for the active session
@@ -124,6 +131,11 @@ New code should use `menu-items.php` directly.
 
 Admin CRUD now uses PHP session authentication and restaurant ownership checks.
 Public visitors should continue to use `site-data.php` and the public `POST` flows on `orders.php` and `reservations.php`.
+
+Role normalization note:
+
+- Legacy `manager` values still normalize to `restaurant_staff` in runtime helpers.
+- New Phase 4 writes store `restaurant_staff` in the tenant membership tables.
 
 ## Tenant isolation
 

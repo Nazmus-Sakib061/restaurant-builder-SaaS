@@ -41,6 +41,7 @@ If you prefer the SQL scripts to create the database automatically, you can impo
 - Every restaurant-specific table uses `restaurant_id` so each restaurant can keep its own menu, settings, orders, reservations, and deals.
 - `slug` is the URL-safe unique identifier used for lookups such as `default`, `demo-pizza-house`, or `family-pizza-combo`.
 - `theme_presets` stores reusable design palettes so different restaurant types can switch visual themes without changing the frontend code.
+- Phase 4 adds a tenant-management migration that keeps the schema compatible while normalizing legacy `manager` labels toward `restaurant_staff`.
 
 ## Auth Foundation
 
@@ -48,6 +49,7 @@ If you prefer the SQL scripts to create the database automatically, you can impo
 - The seed file creates a local-dev super admin and one demo restaurant owner.
 - Login is handled through the PHP session-based admin auth flow.
 - The seeded password hashes are stored in the SQL file, not in plaintext.
+- Tenant management now uses `restaurant_staff` as the preferred runtime role label for non-owner staff assignments.
 
 ### Default Local-Dev Logins
 
