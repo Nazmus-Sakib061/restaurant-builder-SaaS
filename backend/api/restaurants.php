@@ -339,6 +339,9 @@ if (in_array($method, ['PUT', 'PATCH', 'DELETE'], true)) {
     $nextSlug = array_key_exists('slug', $payload) ? strtolower(trim((string) $payload['slug'])) : (string) $restaurant['slug'];
     $nextBusinessType = array_key_exists('business_type', $payload) ? trim((string) $payload['business_type']) : (string) $restaurant['business_type'];
     $nextStatus = array_key_exists('status', $payload) ? strtolower(trim((string) $payload['status'])) : (string) $restaurant['status'];
+    if ($method === 'DELETE') {
+        $nextStatus = 'inactive';
+    }
     $errors = [];
 
     if ($nextName === '' || strlen($nextName) > 150) {
