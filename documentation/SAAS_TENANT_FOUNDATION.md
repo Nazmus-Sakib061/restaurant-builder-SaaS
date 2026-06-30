@@ -78,14 +78,14 @@ This keeps public and admin tenant resolution centralized.
 
 Recommended next phase:
 
-- `Phase 3 - Tenant UI Alignment and Role Cleanup`
+- `Phase 4 - Owner Onboarding and Tenant Management`
 
 Suggested focus:
 
-- Finish replacing demo-only defaults in the remaining front-end fallback paths.
-- Normalize role naming in the schema and auth docs.
-- Add explicit tenant-selection UX in the admin shell.
-- Add automated tenant-scoping tests for the highest-risk endpoints.
+- Add super-admin tenant creation and owner onboarding flows.
+- Keep the tenant management UI scoped to the super-admin surface only.
+- Preserve the runtime `restaurant_staff` role normalization while migrating legacy data.
+- Add final smoke tests around tenant management and cross-tenant write safety.
 
 ## 10. Phase 2.1 Cleanup Notes
 

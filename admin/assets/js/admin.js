@@ -27,6 +27,24 @@ const settingsSaveButton = document.getElementById("settingsSaveButton");
 const activeRestaurantContext = document.getElementById("activeRestaurantContext");
 const activeRestaurantName = document.getElementById("activeRestaurantName");
 const activeRestaurantMeta = document.getElementById("activeRestaurantMeta");
+const tenantManagementPanel = document.getElementById("tenantManagement");
+const tenantManagementFeedback = document.getElementById("tenantManagementFeedback");
+const restaurantManagementTableBody = document.getElementById("restaurantManagementTableBody");
+const restaurantManagementForm = document.getElementById("restaurantManagementForm");
+const restaurantManagementIdField = document.getElementById("restaurantManagementIdField");
+const restaurantManagementNameField = document.getElementById("restaurantManagementNameField");
+const restaurantManagementSlugField = document.getElementById("restaurantManagementSlugField");
+const restaurantManagementStatusField = document.getElementById("restaurantManagementStatusField");
+const restaurantManagementSaveButton = document.getElementById("restaurantManagementSaveButton");
+const restaurantManagementResetButtons = Array.from(document.querySelectorAll('[data-action="reset-restaurant-management-form"]'));
+const restaurantOwnerTableBody = document.getElementById("restaurantOwnerTableBody");
+const restaurantOwnerForm = document.getElementById("restaurantOwnerForm");
+const restaurantOwnerNameField = document.getElementById("restaurantOwnerNameField");
+const restaurantOwnerEmailField = document.getElementById("restaurantOwnerEmailField");
+const restaurantOwnerPasswordField = document.getElementById("restaurantOwnerPasswordField");
+const restaurantOwnerRestaurantField = document.getElementById("restaurantOwnerRestaurantField");
+const restaurantOwnerSaveButton = document.getElementById("restaurantOwnerSaveButton");
+const restaurantOwnerResetButtons = Array.from(document.querySelectorAll('[data-action="reset-restaurant-owner-form"]'));
 const logoPathField = document.getElementById("logoPath");
 const logoUploadField = document.getElementById("logoUploadField");
 const logoUploadButton = document.getElementById("logoUploadButton");
@@ -241,6 +259,8 @@ let currentGallery = [];
 let currentOrders = [];
 let currentOrdersSource = "backend";
 let currentRevenueTotal = 0;
+let managementRestaurants = [];
+let managementOwnerAssignments = [];
 
 const buildApiUrl = (endpoint, params = {}) => {
   const query = new URLSearchParams();
@@ -1393,6 +1413,381 @@ const renderActiveRestaurantContext = (context = null) => {
   }
 };
 
+const setTenantManagementFeedback = (message, state = "success") => {
+  if (!tenantManagementFeedback) {
+    return;
+  }
+
+  tenantManagementFeedback.textContent = message;
+  tenantManagementFeedback.classList.toggle("is-error", state === "error");
+};
+
+const renderTenantManagementVisibility = (context = currentUserContext) => {
+  const isSuperAdmin = Boolean(context?.user?.is_super_admin);
+
+  if (tenantManagementPanel) {
+    tenantManagementPanel.hidden = !isSuperAdmin;
+  }
+
+  if (!isSuperAdmin) {
+    managementRestaurants = [];
+    managementOwnerAssignments = [];
+    if (restaurantManagementTableBody) {
+      restaurantManagementTableBody.innerHTML = "";
+    }
+    if (restaurantOwnerTableBody) {
+      restaurantOwnerTableBody.innerHTML = "";
+    }
+    if (restaurantOwnerRestaurantField) {
+      restaurantOwnerRestaurantField.innerHTML = "";
+    }
+  }
+
+  return isSuperAdmin;
+};
+
+const getActiveRestaurants = (restaurants) => (Array.isArray(restaurants) ? restaurants : [])
+  .filter((restaurant) => String(restaurant?.status || "").toLowerCase() === "active");
+
+const populateRestaurantOwnerSelect = (restaurants) => {
+  if (!restaurantOwnerRestaurantField) {
+    return;
+  }
+
+  const activeRestaurants = getActiveRestaurants(restaurants);
+  restaurantOwnerRestaurantField.innerHTML = "";
+
+  if (!activeRestaurants.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No active restaurants";
+    restaurantOwnerRestaurantField.appendChild(option);
+    restaurantOwnerRestaurantField.value = "";
+    return;
+  }
+
+  activeRestaurants.forEach((restaurant) => {
+    const option = document.createElement("option");
+    option.value = String(restaurant.id);
+    option.textContent = `${restaurant.name} (${restaurant.slug})`;
+    restaurantOwnerRestaurantField.appendChild(option);
+  });
+
+  restaurantOwnerRestaurantField.value = String(activeRestaurants[0].id);
+};
+
+const fillRestaurantManagementForm = (restaurant = null) => {
+  if (restaurantManagementIdField) {
+    restaurantManagementIdField.value = String(restaurant?.id ?? "");
+  }
+  if (restaurantManagementNameField) {
+    restaurantManagementNameField.value = String(restaurant?.name ?? "");
+  }
+  if (restaurantManagementSlugField) {
+    restaurantManagementSlugField.value = String(restaurant?.slug ?? "");
+  }
+  if (restaurantManagementStatusField) {
+    restaurantManagementStatusField.value = String(restaurant?.status ?? "active");
+  }
+  if (restaurantManagementSaveButton) {
+    restaurantManagementSaveButton.textContent = restaurant?.id ? "Update Restaurant" : "Save Restaurant";
+  }
+};
+
+const resetRestaurantManagementForm = () => {
+  fillRestaurantManagementForm(null);
+  setTenantManagementFeedback("Restaurant form reset.");
+};
+
+const resetRestaurantOwnerForm = () => {
+  if (restaurantOwnerNameField) {
+    restaurantOwnerNameField.value = "";
+  }
+  if (restaurantOwnerEmailField) {
+    restaurantOwnerEmailField.value = "";
+  }
+  if (restaurantOwnerPasswordField) {
+    restaurantOwnerPasswordField.value = "";
+  }
+  if (restaurantOwnerRestaurantField && restaurantOwnerRestaurantField.options.length > 0) {
+    restaurantOwnerRestaurantField.selectedIndex = 0;
+  }
+  setTenantManagementFeedback("Owner form reset.");
+};
+
+const renderRestaurantManagementTable = (restaurants) => {
+  if (!restaurantManagementTableBody) {
+    return;
+  }
+
+  const list = Array.isArray(restaurants) ? restaurants : [];
+  restaurantManagementTableBody.innerHTML = "";
+
+  if (!list.length) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 6;
+    cell.textContent = "No restaurants found.";
+    row.appendChild(cell);
+    restaurantManagementTableBody.appendChild(row);
+    return;
+  }
+
+  list.forEach((restaurant) => {
+    const row = document.createElement("tr");
+    const ownerName = String(restaurant?.owner_name || restaurant?.owner?.name || "Unassigned").trim() || "Unassigned";
+    const ownerEmail = String(restaurant?.owner_email || restaurant?.owner?.email || "").trim();
+    const ownerLabel = ownerEmail ? `${ownerName} (${ownerEmail})` : ownerName;
+
+    row.innerHTML = `
+      <td>${escapeHTML(restaurant?.name || "")}</td>
+      <td><code>${escapeHTML(restaurant?.slug || "")}</code></td>
+      <td><span class="status-pill ${String(restaurant?.status || "").toLowerCase() === "active" ? "status-pill--live" : ""}">${escapeHTML(restaurant?.status || "active")}</span></td>
+      <td>${escapeHTML(ownerLabel)}</td>
+      <td>${escapeHTML(formatDate(restaurant?.updated_at || restaurant?.created_at || null))}</td>
+      <td>
+        <button type="button" class="btn btn--ghost btn--compact" data-tenant-action="edit-restaurant" data-restaurant-id="${escapeHTML(String(restaurant?.id || ""))}">Edit</button>
+      </td>
+    `;
+    restaurantManagementTableBody.appendChild(row);
+  });
+};
+
+const renderRestaurantOwnerTable = (assignments) => {
+  if (!restaurantOwnerTableBody) {
+    return;
+  }
+
+  const list = Array.isArray(assignments) ? assignments : [];
+  restaurantOwnerTableBody.innerHTML = "";
+
+  if (!list.length) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 4;
+    cell.textContent = "No owner assignments found.";
+    row.appendChild(cell);
+    restaurantOwnerTableBody.appendChild(row);
+    return;
+  }
+
+  list.forEach((assignment) => {
+    const restaurant = assignment?.restaurant || {};
+    const owner = assignment?.owner || {};
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${escapeHTML(restaurant?.name || "")}<br><small>${escapeHTML(restaurant?.slug || "")}</small></td>
+      <td>${escapeHTML(owner?.name || "Unassigned")}</td>
+      <td>${escapeHTML(owner?.email || "—")}</td>
+      <td>${escapeHTML(owner?.role || "—")}</td>
+    `;
+    restaurantOwnerTableBody.appendChild(row);
+  });
+};
+
+const loadTenantManagementData = async () => {
+  if (!renderTenantManagementVisibility()) {
+    return;
+  }
+
+  try {
+    const [restaurantsResult, ownersResult] = await Promise.all([
+      fetchJson("restaurants.php"),
+      fetchJson("restaurant-owners.php")
+    ]);
+
+    managementRestaurants = Array.isArray(restaurantsResult.data) ? restaurantsResult.data : [];
+    managementOwnerAssignments = Array.isArray(ownersResult.data) ? ownersResult.data : [];
+    renderRestaurantManagementTable(managementRestaurants);
+    renderRestaurantOwnerTable(managementOwnerAssignments);
+    populateRestaurantOwnerSelect(managementRestaurants);
+  } catch (error) {
+    const message = error.message || "Unable to load tenant management data.";
+    setTenantManagementFeedback(message, "error");
+    showAdminToast(message, "error");
+  }
+};
+
+const extractRestaurantFormPayload = () => ({
+  id: String(restaurantManagementIdField?.value || "").trim(),
+  name: String(restaurantManagementNameField?.value || "").trim(),
+  slug: String(restaurantManagementSlugField?.value || "").trim(),
+  status: String(restaurantManagementStatusField?.value || "active").trim()
+});
+
+const validateRestaurantFormPayload = (payload) => {
+  const errors = {};
+
+  if (!payload.name) {
+    errors.name = "Restaurant name is required.";
+  } else if (payload.name.length > 150) {
+    errors.name = "Restaurant name must be 150 characters or fewer.";
+  }
+
+  if (!payload.slug) {
+    errors.slug = "Restaurant slug is required.";
+  } else if (payload.slug.length > 191) {
+    errors.slug = "Restaurant slug must be 191 characters or fewer.";
+  } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(payload.slug)) {
+    errors.slug = "Restaurant slug may only contain lowercase letters, numbers, and hyphens.";
+  }
+
+  if (!["active", "inactive", "suspended"].includes(payload.status)) {
+    errors.status = "Invalid restaurant status.";
+  }
+
+  return errors;
+};
+
+const saveRestaurantManagement = async (event) => {
+  event.preventDefault();
+
+  if (!renderTenantManagementVisibility()) {
+    return;
+  }
+
+  const payload = extractRestaurantFormPayload();
+  const errors = validateRestaurantFormPayload(payload);
+
+  if (Object.keys(errors).length > 0) {
+    setTenantManagementFeedback("Validation error. Check the highlighted fields.", "error");
+    showAdminToast("Validation error. Check the highlighted fields.", "warning");
+    const firstField = Object.keys(errors)[0];
+    const field = restaurantManagementForm?.elements.namedItem(firstField);
+    if (field && typeof field.focus === "function") {
+      field.focus();
+    }
+    return;
+  }
+
+  const method = payload.id ? "PATCH" : "POST";
+  const body = {
+    name: payload.name,
+    slug: payload.slug,
+    status: payload.status
+  };
+
+  try {
+    setTenantManagementFeedback(payload.id ? "Updating restaurant..." : "Creating restaurant...");
+    if (restaurantManagementSaveButton) {
+      restaurantManagementSaveButton.disabled = true;
+    }
+
+    const result = await fetchJson("restaurants.php", {
+      method,
+      body: {
+        ...body,
+        id: payload.id || undefined
+      }
+    });
+
+    const message = result.message || (payload.id ? "Restaurant updated successfully." : "Restaurant created successfully.");
+    setTenantManagementFeedback(message);
+    showAdminToast(message);
+    resetRestaurantManagementForm();
+    await loadCurrentUserContext();
+    await loadRestaurants();
+    await loadTenantManagementData();
+  } catch (error) {
+    const message = error.message || "Unable to save restaurant.";
+    setTenantManagementFeedback(message, "error");
+    showAdminToast(message, "error");
+  } finally {
+    if (restaurantManagementSaveButton) {
+      restaurantManagementSaveButton.disabled = false;
+    }
+  }
+};
+
+const extractOwnerFormPayload = () => ({
+  name: String(restaurantOwnerNameField?.value || "").trim(),
+  email: String(restaurantOwnerEmailField?.value || "").trim(),
+  password: String(restaurantOwnerPasswordField?.value || "").trim(),
+  restaurant_id: String(restaurantOwnerRestaurantField?.value || "").trim()
+});
+
+const validateOwnerFormPayload = (payload) => {
+  const errors = {};
+
+  if (!payload.name) {
+    errors.name = "Owner name is required.";
+  } else if (payload.name.length > 150) {
+    errors.name = "Owner name must be 150 characters or fewer.";
+  }
+
+  if (!payload.email) {
+    errors.email = "Owner email is required.";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+    errors.email = "Enter a valid email address.";
+  }
+
+  if (payload.password && payload.password.length < 8) {
+    errors.password = "Password must be at least 8 characters.";
+  }
+
+  if (!payload.restaurant_id) {
+    errors.restaurant_id = "Select a restaurant.";
+  }
+
+  return errors;
+};
+
+const saveRestaurantOwner = async (event) => {
+  event.preventDefault();
+
+  if (!renderTenantManagementVisibility()) {
+    return;
+  }
+
+  const payload = extractOwnerFormPayload();
+  const errors = validateOwnerFormPayload(payload);
+
+  if (Object.keys(errors).length > 0) {
+    setTenantManagementFeedback("Validation error. Check the highlighted fields.", "error");
+    showAdminToast("Validation error. Check the highlighted fields.", "warning");
+    const firstField = Object.keys(errors)[0];
+    const field = restaurantOwnerForm?.elements.namedItem(firstField);
+    if (field && typeof field.focus === "function") {
+      field.focus();
+    }
+    return;
+  }
+
+  try {
+    if (restaurantOwnerSaveButton) {
+      restaurantOwnerSaveButton.disabled = true;
+    }
+
+    setTenantManagementFeedback("Saving owner assignment...");
+
+    const result = await fetchJson("restaurant-owners.php", {
+      method: "POST",
+      body: {
+        name: payload.name,
+        email: payload.email,
+        password: payload.password,
+        restaurant_id: payload.restaurant_id
+      }
+    });
+
+    const message = result.message || "Owner saved successfully.";
+    setTenantManagementFeedback(message);
+    showAdminToast(message);
+    resetRestaurantOwnerForm();
+    await loadCurrentUserContext();
+    await loadRestaurants();
+    await loadTenantManagementData();
+  } catch (error) {
+    const message = error.message || "Unable to save owner assignment.";
+    setTenantManagementFeedback(message, "error");
+    showAdminToast(message, "error");
+  } finally {
+    if (restaurantOwnerSaveButton) {
+      restaurantOwnerSaveButton.disabled = false;
+    }
+  }
+};
+
 const syncTenantContext = async (slug = "") => {
   const result = await fetchJson("select-restaurant.php", {
     method: "POST",
@@ -1412,6 +1807,7 @@ const loadCurrentUserContext = async () => {
   currentUserContext = result.data || null;
   loadedRestaurants = Array.isArray(currentUserContext?.restaurants) ? currentUserContext.restaurants : [];
   renderActiveRestaurantContext(currentUserContext);
+  renderTenantManagementVisibility(currentUserContext);
   return currentUserContext;
 };
 
@@ -1624,16 +2020,25 @@ const loadRestaurants = async () => {
   try {
     const context = await loadCurrentUserContext();
     const restaurants = Array.isArray(context?.restaurants) ? context.restaurants : [];
+    const selectableRestaurants = context?.user?.is_super_admin
+      ? getActiveRestaurants(restaurants)
+      : restaurants;
 
-    if (!restaurants.length) {
+    if (!selectableRestaurants.length) {
       loadedRestaurants = [];
       populateRestaurantSelect([], preferredSlug);
-      showSettingsFeedback("No restaurants are assigned to this account.", "error");
-      showAdminToast("No restaurants are assigned to this account.", "error");
+      const noActiveMessage = context?.user?.is_super_admin
+        ? "No active restaurants are available for tenant switching."
+        : "No restaurants are assigned to this account.";
+      showSettingsFeedback(noActiveMessage, "error");
+      showAdminToast(noActiveMessage, "error");
+      if (context?.user?.is_super_admin) {
+        await loadTenantManagementData();
+      }
       return;
     }
 
-    loadedRestaurants = restaurants;
+    loadedRestaurants = selectableRestaurants;
     const activeSlug = context?.active_restaurant?.slug || "";
     const resolvedPreferredSlug = activeSlug || preferredSlug;
     populateRestaurantSelect(loadedRestaurants, resolvedPreferredSlug);
@@ -1649,6 +2054,7 @@ const loadRestaurants = async () => {
     await loadDealsForRestaurant(selectedSlug);
     await loadGalleryForRestaurant(selectedSlug);
     await loadOrdersForRestaurant(selectedSlug);
+    await loadTenantManagementData();
   } catch (error) {
     if (error.status === 401 || error.status === 403) {
       showSettingsFeedback(error.message || "Unable to load restaurants.", "error");
@@ -3624,6 +4030,39 @@ if (settingsForm && restaurantSelect) {
     })();
   });
 }
+
+if (restaurantManagementForm) {
+  restaurantManagementForm.addEventListener("submit", saveRestaurantManagement);
+}
+
+restaurantManagementResetButtons.forEach((button) => {
+  button.addEventListener("click", resetRestaurantManagementForm);
+});
+
+restaurantManagementTableBody?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-tenant-action=\"edit-restaurant\"]");
+  if (!button) {
+    return;
+  }
+
+  const restaurantId = button.dataset.restaurantId;
+  const restaurant = (Array.isArray(managementRestaurants) ? managementRestaurants : []).find((entry) => String(entry.id) === String(restaurantId));
+  if (!restaurant) {
+    setTenantManagementFeedback("Restaurant not found.", "error");
+    return;
+  }
+
+  fillRestaurantManagementForm(restaurant);
+  setTenantManagementFeedback(`Editing ${restaurant.name}.`);
+});
+
+if (restaurantOwnerForm) {
+  restaurantOwnerForm.addEventListener("submit", saveRestaurantOwner);
+}
+
+restaurantOwnerResetButtons.forEach((button) => {
+  button.addEventListener("click", resetRestaurantOwnerForm);
+});
 
 if (categoryForm) {
   categoryForm.addEventListener("submit", saveCategory);

@@ -106,6 +106,134 @@ if (!$pdo instanceof PDO || auth_current_user($pdo) === null) {
           </article>
         </section>
 
+        <section class="panel panel--wide tenant-management" id="tenantManagement" hidden>
+          <div class="panel__header">
+            <div>
+              <span class="panel__eyebrow">Tenant Management</span>
+              <h2>Owner onboarding and restaurant control</h2>
+            </div>
+            <span class="status-pill status-pill--accent">Super admin only</span>
+          </div>
+
+          <p class="panel__note">Create restaurants, assign owners, and update status from a single admin surface. Tenant isolation still applies to every write.</p>
+          <p class="settings-feedback" id="tenantManagementFeedback" aria-live="polite"></p>
+
+          <div class="tenant-management-grid">
+            <article class="tenant-management-card">
+              <div class="panel__header panel__header--compact">
+                <div>
+                  <span class="panel__eyebrow">Restaurants</span>
+                  <h3>Restaurant directory</h3>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table class="admin-table admin-table--compact tenant-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Slug</th>
+                      <th>Status</th>
+                      <th>Owner</th>
+                      <th>Updated</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="restaurantManagementTableBody"></tbody>
+                </table>
+              </div>
+
+              <form id="restaurantManagementForm" class="settings-form settings-form--compact" novalidate>
+                <input type="hidden" id="restaurantManagementIdField" name="id" value="">
+                <div class="settings-group">
+                  <div class="settings-group__header">
+                    <h3>Create or Update Restaurant</h3>
+                    <button type="button" class="btn btn--ghost btn--compact" id="restaurantManagementResetButton" data-action="reset-restaurant-management-form">
+                      Add New
+                    </button>
+                  </div>
+                  <div class="field-grid">
+                    <div class="form-group">
+                      <label for="restaurantManagementNameField">Name</label>
+                      <input id="restaurantManagementNameField" class="field-control" name="name" type="text" maxlength="150" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="restaurantManagementSlugField">Slug</label>
+                      <input id="restaurantManagementSlugField" class="field-control" name="slug" type="text" maxlength="191" placeholder="brand-new-restaurant" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="restaurantManagementStatusField">Status</label>
+                      <select id="restaurantManagementStatusField" class="field-control" name="status">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="suspended">Suspended</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-actions">
+                  <button type="submit" class="btn btn--primary" id="restaurantManagementSaveButton">Save Restaurant</button>
+                  <button type="button" class="btn btn--ghost" data-action="reset-restaurant-management-form">Reset</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="tenant-management-card">
+              <div class="panel__header panel__header--compact">
+                <div>
+                  <span class="panel__eyebrow">Owners</span>
+                  <h3>Owner onboarding</h3>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table class="admin-table admin-table--compact tenant-table">
+                  <thead>
+                    <tr>
+                      <th>Restaurant</th>
+                      <th>Owner</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                    </tr>
+                  </thead>
+                  <tbody id="restaurantOwnerTableBody"></tbody>
+                </table>
+              </div>
+
+              <form id="restaurantOwnerForm" class="settings-form settings-form--compact" novalidate>
+                <div class="settings-group">
+                  <div class="settings-group__header">
+                    <h3>Create or Assign Owner</h3>
+                  </div>
+                  <div class="field-grid">
+                    <div class="form-group">
+                      <label for="restaurantOwnerNameField">Owner Name</label>
+                      <input id="restaurantOwnerNameField" class="field-control" name="name" type="text" maxlength="150" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="restaurantOwnerEmailField">Owner Email</label>
+                      <input id="restaurantOwnerEmailField" class="field-control" name="email" type="email" maxlength="191" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="restaurantOwnerPasswordField">Password</label>
+                      <input id="restaurantOwnerPasswordField" class="field-control" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="Required for new users">
+                      <small class="settings-note">Leave blank only when assigning an existing active user.</small>
+                    </div>
+                    <div class="form-group">
+                      <label for="restaurantOwnerRestaurantField">Restaurant</label>
+                      <select id="restaurantOwnerRestaurantField" class="field-control" name="restaurant_id"></select>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-actions">
+                  <button type="submit" class="btn btn--primary" id="restaurantOwnerSaveButton">Save Owner</button>
+                  <button type="button" class="btn btn--ghost" id="restaurantOwnerResetButton" data-action="reset-restaurant-owner-form">Reset</button>
+                </div>
+              </form>
+            </article>
+          </div>
+        </section>
+
         <section class="panel-grid">
           <article class="panel panel--wide" id="orders">
             <div class="panel__header">

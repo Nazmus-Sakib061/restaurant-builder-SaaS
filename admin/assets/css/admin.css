@@ -559,6 +559,10 @@ button {
   margin-bottom: 1rem;
 }
 
+.panel__header--compact {
+  margin-bottom: 0.8rem;
+}
+
 .panel__header h2 {
   margin-top: 0.7rem;
   font-size: 1.35rem;
@@ -570,6 +574,38 @@ button {
   margin: 0 0 0.95rem;
   color: var(--muted);
   font-size: 0.94rem;
+}
+
+.tenant-management {
+  display: grid;
+  gap: 1rem;
+}
+
+.tenant-management-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.tenant-management-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.tenant-management-card .settings-form {
+  margin-top: 0;
+}
+
+.tenant-table td {
+  vertical-align: top;
+}
+
+.tenant-table code {
+  color: #ffd8a1;
 }
 
 .settings-panel {
@@ -1262,6 +1298,10 @@ button {
   .field-grid,
   .field-grid--colors,
   .settings-list--summary {
+    grid-template-columns: 1fr;
+  }
+
+  .tenant-management-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -95,4 +95,4 @@ Runtime helpers keep the SaaS role surface stable even if the schema still store
 
 ## Next Recommended Phase
 
-- SaaS Phase 4 - Tenant CRUD Polish and Reporting Hardening
+- SaaS Phase 4 - Owner Onboarding and Tenant Management

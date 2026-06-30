@@ -68,9 +68,15 @@ function auth_active_restaurant_id(): ?int
     return strict_positive_int($_SESSION['auth_user']['active_restaurant_id'] ?? null);
 }
 
-function auth_store_active_restaurant_id(int $restaurantId): void
+function auth_store_active_restaurant_id(?int $restaurantId): void
 {
     auth_session_boot();
+
+    if ($restaurantId === null) {
+        unset($_SESSION['auth_user']['active_restaurant_id']);
+        return;
+    }
+
     $_SESSION['auth_user']['active_restaurant_id'] = $restaurantId;
 }
 
@@ -186,6 +192,20 @@ function auth_require_login(PDO $pdo): array
     return $user;
 }
 
+function auth_require_super_admin(PDO $pdo): array
+{
+    $user = auth_require_login($pdo);
+
+    if (!auth_role_is_super_admin($user['role'] ?? null)) {
+        json_response([
+            'success' => false,
+            'message' => 'Forbidden.',
+        ], 403);
+    }
+
+    return $user;
+}
+
 function auth_attempt_login(PDO $pdo, string $email, string $password): array
 {
     $normalizedEmail = strtolower(trim($email));
@@ -232,6 +252,21 @@ function auth_attempt_login(PDO $pdo, string $email, string $password): array
     ];
 }
 
+function auth_user_row_by_email(PDO $pdo, string $email): ?array
+{
+    $statement = $pdo->prepare(
+        'SELECT id, name, email, password_hash, role, status, created_at, updated_at
+         FROM users
+         WHERE email = :email
+         LIMIT 1'
+    );
+    $statement->execute(['email' => strtolower(trim($email))]);
+
+    $row = $statement->fetch();
+
+    return $row ?: null;
+}
+
 function auth_logout(): void
 {
     auth_clear_session();
@@ -246,10 +281,19 @@ function auth_user_restaurants(PDO $pdo, array $user): array
 
     if (auth_role_is_super_admin($user['role'] ?? null)) {
         $statement = $pdo->prepare(
-            'SELECT id, name, slug, business_type, status
+            'SELECT
+                id,
+                name,
+                slug,
+                business_type,
+                owner_name,
+                owner_email,
+                owner_user_id,
+                status,
+                created_at,
+                updated_at
              FROM restaurants
-             WHERE status = "active"
-             ORDER BY name ASC, created_at DESC'
+             ORDER BY (status = "active") DESC, name ASC, created_at DESC'
         );
         $statement->execute();
 
@@ -259,7 +303,14 @@ function auth_user_restaurants(PDO $pdo, array $user): array
                 'name' => (string) $restaurant['name'],
                 'slug' => (string) $restaurant['slug'],
                 'business_type' => (string) $restaurant['business_type'],
+                'owner_name' => (string) ($restaurant['owner_name'] ?? ''),
+                'owner_email' => (string) ($restaurant['owner_email'] ?? ''),
+                'owner_user_id' => isset($restaurant['owner_user_id']) && $restaurant['owner_user_id'] !== null
+                    ? (int) $restaurant['owner_user_id']
+                    : null,
                 'status' => (string) $restaurant['status'],
+                'created_at' => $restaurant['created_at'] ?? null,
+                'updated_at' => $restaurant['updated_at'] ?? null,
                 'access_role' => 'super_admin',
             ];
         }, $statement->fetchAll());
@@ -271,7 +322,12 @@ function auth_user_restaurants(PDO $pdo, array $user): array
             r.name,
             r.slug,
             r.business_type,
+            r.owner_name,
+            r.owner_email,
+            r.owner_user_id,
             r.status,
+            r.created_at,
+            r.updated_at,
             COALESCE(ru.role, CASE WHEN r.owner_user_id = :owner_case_user_id THEN "restaurant_owner" END) AS access_role
          FROM restaurants r
          LEFT JOIN restaurant_users ru
@@ -296,7 +352,14 @@ function auth_user_restaurants(PDO $pdo, array $user): array
             'name' => (string) $restaurant['name'],
             'slug' => (string) $restaurant['slug'],
             'business_type' => (string) $restaurant['business_type'],
+            'owner_name' => (string) ($restaurant['owner_name'] ?? ''),
+            'owner_email' => (string) ($restaurant['owner_email'] ?? ''),
+            'owner_user_id' => isset($restaurant['owner_user_id']) && $restaurant['owner_user_id'] !== null
+                ? (int) $restaurant['owner_user_id']
+                : null,
             'status' => (string) $restaurant['status'],
+            'created_at' => $restaurant['created_at'] ?? null,
+            'updated_at' => $restaurant['updated_at'] ?? null,
             'access_role' => auth_normalize_role_value($restaurant['access_role'] ?? 'restaurant_owner'),
         ];
     }, $statement->fetchAll());
@@ -334,7 +397,7 @@ function auth_user_can_access_restaurant(PDO $pdo, array $user, int $restaurantI
 function auth_load_active_restaurant(PDO $pdo, int $restaurantId): ?array
 {
     $statement = $pdo->prepare(
-        'SELECT id, name, slug, business_type, owner_user_id, status, created_at, updated_at
+        'SELECT id, name, slug, business_type, owner_name, owner_email, owner_user_id, status, created_at, updated_at
          FROM restaurants
          WHERE id = :id
            AND status = "active"
@@ -350,7 +413,7 @@ function auth_load_active_restaurant(PDO $pdo, int $restaurantId): ?array
 function auth_load_active_restaurant_by_slug(PDO $pdo, string $slug): ?array
 {
     $statement = $pdo->prepare(
-        'SELECT id, name, slug, business_type, owner_user_id, status, created_at, updated_at
+        'SELECT id, name, slug, business_type, owner_name, owner_email, owner_user_id, status, created_at, updated_at
          FROM restaurants
          WHERE slug = :slug
            AND status = "active"
@@ -398,6 +461,12 @@ function auth_format_restaurant_context(array $restaurant): array
         'name' => (string) $restaurant['name'],
         'slug' => (string) $restaurant['slug'],
         'business_type' => (string) $restaurant['business_type'],
+        'owner_name' => isset($restaurant['owner_name']) && $restaurant['owner_name'] !== null
+            ? (string) $restaurant['owner_name']
+            : null,
+        'owner_email' => isset($restaurant['owner_email']) && $restaurant['owner_email'] !== null
+            ? (string) $restaurant['owner_email']
+            : null,
         'owner_user_id' => isset($restaurant['owner_user_id']) && $restaurant['owner_user_id'] !== null
             ? (int) $restaurant['owner_user_id']
             : null,
@@ -414,7 +483,18 @@ function auth_default_visible_restaurant(PDO $pdo, array $user): ?array
         return null;
     }
 
-    return auth_load_active_restaurant($pdo, (int) $restaurants[0]['id']);
+    foreach ($restaurants as $restaurant) {
+        if (strtolower((string) ($restaurant['status'] ?? '')) !== 'active') {
+            continue;
+        }
+
+        $resolved = auth_load_active_restaurant($pdo, (int) $restaurant['id']);
+        if ($resolved !== null) {
+            return $resolved;
+        }
+    }
+
+    return null;
 }
 
 function auth_admin_restaurant_context(PDO $pdo): array
