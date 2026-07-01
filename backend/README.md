@@ -62,6 +62,23 @@ Common response helpers live in `backend/api/_response.php`.
   - accepts `restaurant_id` or a restaurant slug
   - checks restaurant access before updating the session
 
+## Plan Access Control
+
+- `backend/helpers/feature_gate.php`
+  - central plan and feature lookup helper
+  - exposes `getRestaurantPlan($restaurantId)`, `getPlanFeatures($planId)`, `canUseFeature($restaurantId, $featureKey)`, and `requireFeature($restaurantId, $featureKey)`
+- `backend/api/restaurant-plans.php`
+  - `GET` plan and subscription overview for a restaurant
+  - `POST` / `PATCH` super-admin plan assignment
+- `backend/api/site-data.php`
+  - filters public `deals` and `gallery` payloads when the active plan disables those features
+- `backend/api/current-user.php`
+  - includes safe `plan` info for the active restaurant context when available
+- `backend/api/deals.php` and `backend/api/gallery.php`
+  - gate create/update/delete writes with backend plan checks
+
+Phase 5.1 uses the existing `restaurants` table as the tenant table and stores current plan state in `restaurant_subscriptions`.
+
 ## API endpoints
 
 - `backend/api/restaurants.php`
@@ -161,7 +178,7 @@ Several resources use soft delete by updating `status` to `inactive`:
 ## Quick test URLs
 
 - `http://localhost/restaurant_builder_SaaS/backend/api/site-data.php?tenant=default`
-- `http://localhost/restaurant_builder/admin/login.php`
+- `http://localhost/restaurant_builder_SaaS/admin/login.php`
 - `http://localhost/restaurant_builder_SaaS/backend/api/current-user.php`
 
 Repeat the same URLs with:

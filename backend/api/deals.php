@@ -432,6 +432,7 @@ if ($method === 'GET') {
 
 if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
     require_admin_write_access();
+    requireFeature($restaurantId, 'deals');
 }
 
 if ($method === 'POST') {

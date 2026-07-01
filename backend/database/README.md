@@ -42,6 +42,11 @@ If you prefer the SQL scripts to create the database automatically, you can impo
 - `slug` is the URL-safe unique identifier used for lookups such as `default`, `demo-pizza-house`, or `family-pizza-combo`.
 - `theme_presets` stores reusable design palettes so different restaurant types can switch visual themes without changing the frontend code.
 - Phase 4 adds a tenant-management migration that keeps the schema compatible while normalizing legacy `manager` labels toward `restaurant_staff`.
+- Phase 5.1 adds plan tables and a subscription table:
+  - `plans`
+  - `plan_features`
+  - `restaurant_subscriptions`
+- The plan feature helper reads those tables to decide whether gallery, deals, statistics, exports, and staff management are unlocked for a restaurant.
 
 ## Auth Foundation
 
@@ -50,6 +55,8 @@ If you prefer the SQL scripts to create the database automatically, you can impo
 - Login is handled through the PHP session-based admin auth flow.
 - The seeded password hashes are stored in the SQL file, not in plaintext.
 - Tenant management now uses `restaurant_staff` as the preferred runtime role label for non-owner staff assignments.
+- Existing restaurants are seeded with the default SaaS plan state during the Phase 5.1 migration.
+- The local test migration chooses a safe default plan assignment and does not store payment data.
 
 ### Default Local-Dev Logins
 
