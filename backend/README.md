@@ -76,6 +76,13 @@ Common response helpers live in `backend/api/_response.php`.
   - includes safe `plan` info for the active restaurant context when available
 - `backend/api/deals.php` and `backend/api/gallery.php`
   - gate create/update/delete writes with backend plan checks
+- `backend/api/settings.php`
+  - `GET` current restaurant settings for the active session
+  - `POST` / `PUT` / `PATCH` upsert settings for the active restaurant
+  - write operations require the `branding` feature for the active plan
+- `backend/api/uploads.php`
+  - restaurant-scoped image uploads for gallery, menu, deals, and settings flows
+  - `gallery`, `deals`, and `settings` uploads are feature-gated before the file is accepted
 
 Phase 5.1 uses the existing `restaurants` table as the tenant table and stores current plan state in `restaurant_subscriptions`.
 
@@ -94,6 +101,7 @@ Phase 5.1 uses the existing `restaurants` table as the tenant table and stores c
 - `backend/api/settings.php`
   - `GET` current restaurant settings for the active session
   - `POST` / `PUT` upsert settings for the active restaurant
+  - the admin dashboard shows a plan-access summary card and a branding availability note alongside this form
 
 - `backend/api/categories.php`
   - `GET` restaurant categories for the active session
@@ -120,6 +128,7 @@ Phase 5.1 uses the existing `restaurants` table as the tenant table and stores c
   - accepts JPG, PNG, and WebP images up to 3 MB
   - stores files under `uploads/restaurants/{restaurant_id}/gallery/`
   - returns a project-relative public path; it does not write an absolute server path to the database
+  - honors the active plan before allowing gallery, deals, or branding-related uploads
 
 - `backend/api/orders.php`
   - `GET` restaurant orders with items for the active session
@@ -140,6 +149,14 @@ Phase 5.1 uses the existing `restaurants` table as the tenant table and stores c
     - menu_items
     - deals
     - gallery
+
+## Phase 5.5 Smoke Regression
+
+Run the repeatable SaaS feature smoke script from the repo root:
+
+`php tests/smoke-saas-plan-features.php`
+
+The script exercises tenant selection, plan assignment, branding write protection, gallery/deals feature locks, and cleanup for temporary free/pro tenants.
 
 ## Legacy compatibility
 

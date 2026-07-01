@@ -120,7 +120,40 @@ Passed on the local branch:
 - Custom domain is only a feature flag placeholder at this stage.
 - Subscription renewals and billing flows are still out of scope.
 
-## 13. Not Included
+## 13. Phase 5.5 UI Expansion
+
+The Phase 5.5 regression pass expanded the admin dashboard so plan access is visible at a glance.
+
+- A new feature-access summary card now shows the active plan state for:
+  - statistics
+  - exports
+  - staff management
+  - branding
+  - custom domain
+- The settings panel now shows a branding availability note and becomes read-only when branding is not included in the current plan.
+- `backend/api/settings.php` now enforces the `branding` feature on write requests.
+- `backend/api/uploads.php` now blocks gallery, deals, and branding uploads when the active plan does not allow them.
+- The custom domain row remains a placeholder and does not change routing behavior yet.
+
+## 14. Smoke Regression
+
+Repeatable verification command:
+
+```bash
+php tests/smoke-saas-plan-features.php
+```
+
+The smoke script covers:
+
+- public homepage and admin login smoke checks
+- `current-user.php` and `select-restaurant.php` session handling
+- tenant-scoped plan assignment checks for temporary free and pro restaurants
+- branding write protection on the free plan
+- gallery and deals locks on the free plan
+- gallery and deals access on the pro plan
+- inactive tenant `site-data.php` behavior after cleanup
+
+## 15. Not Included
 
 - billing
 - payment gateway integration
