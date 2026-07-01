@@ -134,6 +134,7 @@ if (!$pdo instanceof PDO || auth_current_user($pdo) === null) {
                       <th>Name</th>
                       <th>Slug</th>
                       <th>Status</th>
+                      <th>Plan</th>
                       <th>Owner</th>
                       <th>Updated</th>
                       <th>Actions</th>
@@ -230,6 +231,34 @@ if (!$pdo instanceof PDO || auth_current_user($pdo) === null) {
                   <button type="button" class="btn btn--ghost" id="restaurantOwnerResetButton" data-action="reset-restaurant-owner-form">Reset</button>
                 </div>
               </form>
+            </article>
+
+            <article class="tenant-management-card">
+              <div class="panel__header panel__header--compact">
+                <div>
+                  <span class="panel__eyebrow">Plans</span>
+                  <h3>Plan access control</h3>
+                </div>
+                <span class="status-pill status-pill--accent">Feature flags</span>
+              </div>
+
+              <p class="settings-note">Assign a plan to unlock or lock feature groups for each restaurant.</p>
+              <p class="settings-feedback" id="restaurantPlanFeedback" aria-live="polite"></p>
+
+              <div class="field-grid">
+                <div class="form-group">
+                  <label for="restaurantPlanRestaurantField">Restaurant</label>
+                  <select id="restaurantPlanRestaurantField" class="field-control" name="restaurant_plan_restaurant"></select>
+                </div>
+                <div class="form-group">
+                  <label for="restaurantPlanField">Plan</label>
+                  <select id="restaurantPlanField" class="field-control" name="plan_id"></select>
+                </div>
+              </div>
+
+              <div class="settings-actions">
+                <button type="button" class="btn btn--primary" id="restaurantPlanSaveButton">Assign Plan</button>
+              </div>
             </article>
           </div>
         </section>
@@ -894,5 +923,4 @@ if (!$pdo instanceof PDO || auth_current_user($pdo) === null) {
   <script src="assets/js/admin.js?v=auth-foundation-1"></script>
 </body>
 </html>
-
 

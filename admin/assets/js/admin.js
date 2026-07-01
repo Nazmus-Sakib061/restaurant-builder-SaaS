@@ -45,6 +45,10 @@ const restaurantOwnerPasswordField = document.getElementById("restaurantOwnerPas
 const restaurantOwnerRestaurantField = document.getElementById("restaurantOwnerRestaurantField");
 const restaurantOwnerSaveButton = document.getElementById("restaurantOwnerSaveButton");
 const restaurantOwnerResetButtons = Array.from(document.querySelectorAll('[data-action="reset-restaurant-owner-form"]'));
+const restaurantPlanFeedback = document.getElementById("restaurantPlanFeedback");
+const restaurantPlanRestaurantField = document.getElementById("restaurantPlanRestaurantField");
+const restaurantPlanField = document.getElementById("restaurantPlanField");
+const restaurantPlanSaveButton = document.getElementById("restaurantPlanSaveButton");
 const logoPathField = document.getElementById("logoPath");
 const logoUploadField = document.getElementById("logoUploadField");
 const logoUploadButton = document.getElementById("logoUploadButton");
@@ -261,6 +265,8 @@ let currentOrdersSource = "backend";
 let currentRevenueTotal = 0;
 let managementRestaurants = [];
 let managementOwnerAssignments = [];
+let managementPlanAssignments = [];
+let managementPlans = [];
 
 const buildApiUrl = (endpoint, params = {}) => {
   const query = new URLSearchParams();
@@ -1382,6 +1388,7 @@ const updatePublicPreviewLink = (slug) => {
 const renderActiveRestaurantContext = (context = null) => {
   const activeRestaurant = context?.active_restaurant || null;
   const user = context?.user || null;
+  const plan = context?.plan || null;
   const sessionId = context?.session?.active_restaurant_id ?? context?.active_restaurant_id ?? null;
 
   if (activeRestaurantName) {
@@ -1401,6 +1408,9 @@ const renderActiveRestaurantContext = (context = null) => {
     } else {
       metaParts.push("Select a restaurant to continue");
     }
+    if (plan?.slug) {
+      metaParts.push(`plan: ${plan.name || plan.slug}`);
+    }
     if (sessionId) {
       metaParts.push(`session id: ${sessionId}`);
     }
@@ -1411,6 +1421,83 @@ const renderActiveRestaurantContext = (context = null) => {
   if (activeRestaurantContext) {
     activeRestaurantContext.dataset.state = activeRestaurant ? "active" : "empty";
   }
+};
+
+const featureLockMessage = "This feature is not available on your current plan. Upgrade required.";
+
+const hasPlanContext = (context = currentUserContext) => Boolean(context?.plan?.slug);
+
+const isFeatureEnabled = (featureKey, context = currentUserContext) => {
+  if (!hasPlanContext(context)) {
+    return true;
+  }
+
+  return Boolean(context?.plan?.features?.[featureKey]);
+};
+
+const setFormFeatureLock = (form, locked) => {
+  if (!form) {
+    return;
+  }
+
+  form.dataset.featureLocked = locked ? "true" : "false";
+  Array.from(form.querySelectorAll("input, select, textarea, button")).forEach((field) => {
+    if (field.type === "hidden") {
+      return;
+    }
+    field.disabled = locked;
+  });
+};
+
+const renderLockedTableMessage = (tableBody, columnCount, message) => {
+  if (!tableBody) {
+    return;
+  }
+
+  tableBody.innerHTML = `
+    <tr>
+      <td colspan="${columnCount}">${escapeHTML(message)}</td>
+    </tr>
+  `;
+};
+
+const applyPlanFeatureState = (context = currentUserContext) => {
+  const hasPlan = hasPlanContext(context);
+  if (!hasPlan) {
+    setFormFeatureLock(galleryForm, false);
+    setFormFeatureLock(dealForm, false);
+    return {
+      galleryEnabled: true,
+      dealsEnabled: true
+    };
+  }
+
+  const galleryEnabled = !hasPlan || Boolean(context?.plan?.features?.gallery);
+  const dealsEnabled = !hasPlan || Boolean(context?.plan?.features?.deals);
+
+  setFormFeatureLock(galleryForm, !galleryEnabled);
+  setFormFeatureLock(dealForm, !dealsEnabled);
+
+  if (!galleryEnabled) {
+    showGalleryFeedback(featureLockMessage, "error");
+    renderLockedTableMessage(galleryTableBody, 6, featureLockMessage);
+  } else if (currentGallery.length || galleryTableBody) {
+    renderGallery();
+    showGalleryFeedback("");
+  }
+
+  if (!dealsEnabled) {
+    showDealFeedback(featureLockMessage, "error");
+    renderLockedTableMessage(dealTableBody, 6, featureLockMessage);
+  } else if (dealTableBody) {
+    renderDeals();
+    showDealFeedback("");
+  }
+
+  return {
+    galleryEnabled,
+    dealsEnabled
+  };
 };
 
 const setTenantManagementFeedback = (message, state = "success") => {
@@ -1432,6 +1519,8 @@ const renderTenantManagementVisibility = (context = currentUserContext) => {
   if (!isSuperAdmin) {
     managementRestaurants = [];
     managementOwnerAssignments = [];
+    managementPlanAssignments = [];
+    managementPlans = [];
     if (restaurantManagementTableBody) {
       restaurantManagementTableBody.innerHTML = "";
     }
@@ -1440,6 +1529,15 @@ const renderTenantManagementVisibility = (context = currentUserContext) => {
     }
     if (restaurantOwnerRestaurantField) {
       restaurantOwnerRestaurantField.innerHTML = "";
+    }
+    if (restaurantPlanRestaurantField) {
+      restaurantPlanRestaurantField.innerHTML = "";
+    }
+    if (restaurantPlanField) {
+      restaurantPlanField.innerHTML = "";
+    }
+    if (restaurantPlanFeedback) {
+      restaurantPlanFeedback.textContent = "";
     }
   }
 
@@ -1526,7 +1624,7 @@ const renderRestaurantManagementTable = (restaurants) => {
   if (!list.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 6;
+    cell.colSpan = 7;
     cell.textContent = "No restaurants found.";
     row.appendChild(cell);
     restaurantManagementTableBody.appendChild(row);
@@ -1538,11 +1636,16 @@ const renderRestaurantManagementTable = (restaurants) => {
     const ownerName = String(restaurant?.owner_name || restaurant?.owner?.name || "Unassigned").trim() || "Unassigned";
     const ownerEmail = String(restaurant?.owner_email || restaurant?.owner?.email || "").trim();
     const ownerLabel = ownerEmail ? `${ownerName} (${ownerEmail})` : ownerName;
+    const assignment = Array.isArray(managementPlanAssignments)
+      ? managementPlanAssignments.find((entry) => String(entry?.restaurant?.id || "") === String(restaurant?.id || ""))
+      : null;
+    const planLabel = String(assignment?.plan?.name || assignment?.plan?.slug || "Unassigned").trim() || "Unassigned";
 
     row.innerHTML = `
       <td>${escapeHTML(restaurant?.name || "")}</td>
       <td><code>${escapeHTML(restaurant?.slug || "")}</code></td>
       <td><span class="status-pill ${String(restaurant?.status || "").toLowerCase() === "active" ? "status-pill--live" : ""}">${escapeHTML(restaurant?.status || "active")}</span></td>
+      <td><span class="status-pill status-pill--accent">${escapeHTML(planLabel)}</span></td>
       <td>${escapeHTML(ownerLabel)}</td>
       <td>${escapeHTML(formatDate(restaurant?.updated_at || restaurant?.created_at || null))}</td>
       <td>
@@ -1585,22 +1688,176 @@ const renderRestaurantOwnerTable = (assignments) => {
   });
 };
 
+const setRestaurantPlanFeedback = (message, state = "success") => {
+  if (!restaurantPlanFeedback) {
+    return;
+  }
+
+  restaurantPlanFeedback.textContent = message;
+  restaurantPlanFeedback.classList.toggle("is-error", state === "error");
+};
+
+const getPlanAssignmentForRestaurant = (restaurantId) => {
+  if (!Array.isArray(managementPlanAssignments)) {
+    return null;
+  }
+
+  return managementPlanAssignments.find((entry) => String(entry?.restaurant?.id || "") === String(restaurantId || "")) || null;
+};
+
+const populateRestaurantPlanRestaurantSelect = (restaurants, preferredId = "") => {
+  if (!restaurantPlanRestaurantField) {
+    return;
+  }
+
+  const list = Array.isArray(restaurants) ? restaurants : [];
+  restaurantPlanRestaurantField.innerHTML = "";
+
+  if (!list.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No restaurants found";
+    restaurantPlanRestaurantField.appendChild(option);
+    restaurantPlanRestaurantField.value = "";
+    return;
+  }
+
+  list.forEach((restaurant) => {
+    const option = document.createElement("option");
+    option.value = String(restaurant.id);
+    option.textContent = `${restaurant.name} (${restaurant.slug})`;
+    restaurantPlanRestaurantField.appendChild(option);
+  });
+
+  const resolvedRestaurantId = list.some((restaurant) => String(restaurant.id) === String(preferredId))
+    ? String(preferredId)
+    : String(list[0].id);
+  restaurantPlanRestaurantField.value = resolvedRestaurantId;
+};
+
+const populateRestaurantPlanSelect = (plans, preferredSlug = "") => {
+  if (!restaurantPlanField) {
+    return;
+  }
+
+  const list = Array.isArray(plans) ? plans : [];
+  restaurantPlanField.innerHTML = "";
+
+  if (!list.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No plans found";
+    restaurantPlanField.appendChild(option);
+    restaurantPlanField.value = "";
+    return;
+  }
+
+  list.forEach((plan) => {
+    const option = document.createElement("option");
+    option.value = String(plan.slug || "");
+    option.textContent = `${plan.name}${plan.description ? ` — ${plan.description}` : ""}`;
+    restaurantPlanField.appendChild(option);
+  });
+
+  const resolvedPlanSlug = list.some((plan) => String(plan.slug) === String(preferredSlug))
+    ? String(preferredSlug)
+    : String(list[0].slug || "");
+  restaurantPlanField.value = resolvedPlanSlug;
+};
+
+const syncRestaurantPlanForm = () => {
+  if (!restaurantPlanRestaurantField || !restaurantPlanField) {
+    return;
+  }
+
+  const restaurantId = String(restaurantPlanRestaurantField.value || "");
+  const assignment = getPlanAssignmentForRestaurant(restaurantId);
+  const preferredSlug = String(assignment?.plan?.slug || managementPlans[0]?.slug || "");
+  populateRestaurantPlanSelect(managementPlans, preferredSlug);
+
+  const selectedRestaurant = Array.isArray(managementRestaurants)
+    ? managementRestaurants.find((restaurant) => String(restaurant.id) === restaurantId)
+    : null;
+  if (selectedRestaurant) {
+    const currentPlanName = String(assignment?.plan?.name || assignment?.plan?.slug || "Unassigned").trim();
+    setRestaurantPlanFeedback(`Current plan for ${selectedRestaurant.name}: ${currentPlanName}.`);
+  }
+};
+
+const saveRestaurantPlan = async () => {
+  if (!renderTenantManagementVisibility()) {
+    return;
+  }
+
+  const restaurantId = String(restaurantPlanRestaurantField?.value || "").trim();
+  const planSlug = String(restaurantPlanField?.value || "").trim();
+
+  if (!restaurantId) {
+    setRestaurantPlanFeedback("Select a restaurant first.", "error");
+    return;
+  }
+
+  if (!planSlug) {
+    setRestaurantPlanFeedback("Select a plan first.", "error");
+    return;
+  }
+
+  try {
+    if (restaurantPlanSaveButton) {
+      restaurantPlanSaveButton.disabled = true;
+    }
+
+    setRestaurantPlanFeedback("Assigning plan...");
+    const result = await fetchJson("restaurant-plans.php", {
+      method: "POST",
+      body: {
+        restaurant_id: restaurantId,
+        plan_slug: planSlug
+      }
+    });
+
+    const message = result.message || "Plan assigned successfully.";
+    setRestaurantPlanFeedback(message);
+    showAdminToast(message);
+    await loadCurrentUserContext();
+    await loadTenantManagementData();
+
+    const updatedRestaurant = result.data?.restaurant || null;
+    if (updatedRestaurant?.slug && restaurantSelect?.value === updatedRestaurant.slug) {
+      await refreshRestaurantCrudData(updatedRestaurant.slug);
+    }
+  } catch (error) {
+    const message = error.message || "Unable to assign plan.";
+    setRestaurantPlanFeedback(message, "error");
+    showAdminToast(message, "error");
+  } finally {
+    if (restaurantPlanSaveButton) {
+      restaurantPlanSaveButton.disabled = false;
+    }
+  }
+};
+
 const loadTenantManagementData = async () => {
   if (!renderTenantManagementVisibility()) {
     return;
   }
 
   try {
-    const [restaurantsResult, ownersResult] = await Promise.all([
+    const [restaurantsResult, ownersResult, plansResult] = await Promise.all([
       fetchJson("restaurants.php"),
-      fetchJson("restaurant-owners.php")
+      fetchJson("restaurant-owners.php"),
+      fetchJson("restaurant-plans.php")
     ]);
 
     managementRestaurants = Array.isArray(restaurantsResult.data) ? restaurantsResult.data : [];
     managementOwnerAssignments = Array.isArray(ownersResult.data) ? ownersResult.data : [];
+    managementPlans = Array.isArray(plansResult.data?.plans) ? plansResult.data.plans : [];
+    managementPlanAssignments = Array.isArray(plansResult.data?.assignments) ? plansResult.data.assignments : [];
     renderRestaurantManagementTable(managementRestaurants);
     renderRestaurantOwnerTable(managementOwnerAssignments);
     populateRestaurantOwnerSelect(managementRestaurants);
+    populateRestaurantPlanRestaurantSelect(managementRestaurants, restaurantPlanRestaurantField?.value || managementRestaurants[0]?.id || "");
+    syncRestaurantPlanForm();
   } catch (error) {
     const message = error.message || "Unable to load tenant management data.";
     setTenantManagementFeedback(message, "error");
@@ -1799,6 +2056,7 @@ const syncTenantContext = async (slug = "") => {
   currentUserContext = result.data || currentUserContext;
   loadedRestaurants = Array.isArray(currentUserContext?.restaurants) ? currentUserContext.restaurants : loadedRestaurants;
   renderActiveRestaurantContext(currentUserContext);
+  applyPlanFeatureState(currentUserContext);
   return currentUserContext;
 };
 
@@ -1807,6 +2065,7 @@ const loadCurrentUserContext = async () => {
   currentUserContext = result.data || null;
   loadedRestaurants = Array.isArray(currentUserContext?.restaurants) ? currentUserContext.restaurants : [];
   renderActiveRestaurantContext(currentUserContext);
+  applyPlanFeatureState(currentUserContext);
   renderTenantManagementVisibility(currentUserContext);
   return currentUserContext;
 };
@@ -2696,6 +2955,12 @@ const renderDeals = () => {
 
 const loadDealsForRestaurant = async (slug) => {
   const resolvedSlug = slug || DEFAULT_RESTAURANT_SLUG;
+  if (!isFeatureEnabled("deals")) {
+    currentDeals = [];
+    applyPlanFeatureState(currentUserContext);
+    return;
+  }
+
   try {
     const result = await fetchJson("deals.php", {
       params: { restaurant: resolvedSlug, include_inactive: 1 },
@@ -2716,6 +2981,11 @@ const saveDeal = async (event) => {
   event.preventDefault();
 
   if (!restaurantSelect || !dealForm) {
+    return;
+  }
+
+  if (!isFeatureEnabled("deals")) {
+    showDealFeedback(featureLockMessage, "error");
     return;
   }
 
@@ -2774,6 +3044,11 @@ const saveDeal = async (event) => {
 };
 
 const editDeal = (id) => {
+  if (!isFeatureEnabled("deals")) {
+    showDealFeedback(featureLockMessage, "error");
+    return;
+  }
+
   const deal = currentDeals.find((item) => String(item.id) === String(id));
   if (!deal) {
     showDealFeedback("Deal not found.", "error");
@@ -2787,6 +3062,11 @@ const editDeal = (id) => {
 };
 
 const deleteDeal = async (id) => {
+  if (!isFeatureEnabled("deals")) {
+    showDealFeedback(featureLockMessage, "error");
+    return;
+  }
+
   const deal = currentDeals.find((item) => String(item.id) === String(id));
   if (!deal) {
     showDealFeedback("Deal not found.", "error");
@@ -3422,6 +3702,12 @@ const renderGallery = () => {
 
 const loadGalleryForRestaurant = async (slug) => {
   const resolvedSlug = slug || DEFAULT_RESTAURANT_SLUG;
+  if (!isFeatureEnabled("gallery")) {
+    currentGallery = [];
+    applyPlanFeatureState(currentUserContext);
+    return;
+  }
+
   try {
     const result = await fetchJson("gallery.php", {
       params: { restaurant: resolvedSlug, include_inactive: 1 },
@@ -3442,6 +3728,11 @@ const saveGallery = async (event) => {
   event.preventDefault();
 
   if (!restaurantSelect || !galleryForm) {
+    return;
+  }
+
+  if (!isFeatureEnabled("gallery")) {
+    showGalleryFeedback(featureLockMessage, "error");
     return;
   }
 
@@ -3516,6 +3807,11 @@ const saveGallery = async (event) => {
 };
 
 const editGallery = (id) => {
+  if (!isFeatureEnabled("gallery")) {
+    showGalleryFeedback(featureLockMessage, "error");
+    return;
+  }
+
   const gallery = currentGallery.find((item) => String(item.id) === String(id));
   if (!gallery) {
     showGalleryFeedback("Gallery item not found.", "error");
@@ -3529,6 +3825,11 @@ const editGallery = (id) => {
 };
 
 const deleteGallery = async (id) => {
+  if (!isFeatureEnabled("gallery")) {
+    showGalleryFeedback(featureLockMessage, "error");
+    return;
+  }
+
   const gallery = currentGallery.find((item) => String(item.id) === String(id));
   if (!gallery) {
     showGalleryFeedback("Gallery item not found.", "error");
@@ -4064,6 +4365,20 @@ restaurantOwnerResetButtons.forEach((button) => {
   button.addEventListener("click", resetRestaurantOwnerForm);
 });
 
+restaurantPlanRestaurantField?.addEventListener("change", () => {
+  syncRestaurantPlanForm();
+});
+
+restaurantPlanField?.addEventListener("change", () => {
+  const restaurantName = String(restaurantPlanRestaurantField?.selectedOptions?.[0]?.textContent || "restaurant").trim();
+  const planName = String(restaurantPlanField?.selectedOptions?.[0]?.textContent || "plan").trim();
+  setRestaurantPlanFeedback(`Ready to assign ${planName} to ${restaurantName}.`);
+});
+
+restaurantPlanSaveButton?.addEventListener("click", () => {
+  void saveRestaurantPlan();
+});
+
 if (categoryForm) {
   categoryForm.addEventListener("submit", saveCategory);
 }
@@ -4283,5 +4598,3 @@ window.addEventListener("keydown", (event) => {
     openSidebar(false);
   }
 });
-
-

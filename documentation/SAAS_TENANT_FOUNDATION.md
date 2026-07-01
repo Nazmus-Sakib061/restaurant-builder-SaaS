@@ -146,3 +146,10 @@ Temporary records were deleted after verification.
 - Prefer slug-based lookup for the default tenant, for example:
   - `SELECT id FROM restaurants WHERE slug = 'default' LIMIT 1`
 - The current migration is intentionally update-only and does not drop existing data.
+
+## 15. Phase 5 Note
+
+- Phase 5.1 builds on this tenant foundation with plan-based feature access control.
+- The SaaS branch now uses plan helpers and plan assignment state in addition to tenant scoping.
+- Backend feature gates are required for locked features; frontend locking is only a convenience layer.
+- Gallery and deals are the first gated write surfaces, while the tenant isolation rules remain unchanged.

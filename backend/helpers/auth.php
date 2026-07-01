@@ -567,6 +567,11 @@ function auth_current_user_payload(PDO $pdo): array
         }
     }
 
+    $plan = null;
+    if ($activeRestaurantId !== null && $activeRestaurant !== null) {
+        $plan = getRestaurantPlan($activeRestaurantId);
+    }
+
     return [
         'user' => [
             'id' => (int) ($rawUserRow['id'] ?? $user['id'] ?? 0),
@@ -579,6 +584,7 @@ function auth_current_user_payload(PDO $pdo): array
             'is_restaurant_staff' => (bool) $roleProfile['is_restaurant_staff'],
         ],
         'active_restaurant' => $activeRestaurant,
+        'plan' => $plan,
         'restaurants' => auth_user_restaurants($pdo, $user),
         'session' => [
             'active_restaurant_id' => $activeRestaurantId,

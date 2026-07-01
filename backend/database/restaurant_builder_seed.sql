@@ -12,6 +12,9 @@ DELETE FROM menu_items;
 DELETE FROM menu_categories;
 DELETE FROM restaurant_settings;
 DELETE FROM deals;
+DELETE FROM restaurant_subscriptions;
+DELETE FROM plan_features;
+DELETE FROM plans;
 DELETE FROM restaurant_users;
 DELETE FROM users;
 DELETE FROM restaurants;
@@ -49,6 +52,103 @@ SELECT id INTO @biryani_theme_id
 FROM theme_presets
 WHERE slug = 'biryani-house-dark'
 LIMIT 1;
+
+INSERT INTO plans (
+  name,
+  slug,
+  description,
+  price_monthly,
+  price_yearly,
+  status,
+  sort_order
+) VALUES
+('Free', 'free', 'Starter plan for basic content management.', 0.00, 0.00, 'active', 10),
+('Basic', 'basic', 'For restaurants that need payments and gallery support.', 29.00, 290.00, 'active', 20),
+('Pro', 'pro', 'For growing restaurants that need deeper operations.', 59.00, 590.00, 'active', 30),
+('Premium', 'premium', 'Full access plan with all unlocked feature flags.', 99.00, 990.00, 'active', 40)
+ON DUPLICATE KEY UPDATE
+  name = VALUES(name),
+  description = VALUES(description),
+  price_monthly = VALUES(price_monthly),
+  price_yearly = VALUES(price_yearly),
+  status = VALUES(status),
+  sort_order = VALUES(sort_order),
+  updated_at = CURRENT_TIMESTAMP;
+
+SELECT id INTO @free_plan_id
+FROM plans
+WHERE slug = 'free'
+LIMIT 1;
+
+SELECT id INTO @basic_plan_id
+FROM plans
+WHERE slug = 'basic'
+LIMIT 1;
+
+SELECT id INTO @pro_plan_id
+FROM plans
+WHERE slug = 'pro'
+LIMIT 1;
+
+SELECT id INTO @premium_plan_id
+FROM plans
+WHERE slug = 'premium'
+LIMIT 1;
+
+INSERT INTO plan_features (
+  plan_id,
+  feature_key,
+  is_enabled,
+  limit_value
+) VALUES
+(@free_plan_id, 'categories', 1, NULL),
+(@free_plan_id, 'menu_items', 1, 12),
+(@free_plan_id, 'orders', 1, NULL),
+(@free_plan_id, 'payments', 0, NULL),
+(@free_plan_id, 'gallery', 0, NULL),
+(@free_plan_id, 'deals', 0, NULL),
+(@free_plan_id, 'statistics', 0, NULL),
+(@free_plan_id, 'exports', 0, NULL),
+(@free_plan_id, 'staff_management', 0, NULL),
+(@free_plan_id, 'branding', 0, NULL),
+(@free_plan_id, 'custom_domain', 0, NULL),
+(@basic_plan_id, 'categories', 1, NULL),
+(@basic_plan_id, 'menu_items', 1, NULL),
+(@basic_plan_id, 'orders', 1, NULL),
+(@basic_plan_id, 'payments', 1, NULL),
+(@basic_plan_id, 'gallery', 1, NULL),
+(@basic_plan_id, 'deals', 0, NULL),
+(@basic_plan_id, 'statistics', 0, NULL),
+(@basic_plan_id, 'exports', 0, NULL),
+(@basic_plan_id, 'staff_management', 0, NULL),
+(@basic_plan_id, 'branding', 1, NULL),
+(@basic_plan_id, 'custom_domain', 0, NULL),
+(@pro_plan_id, 'categories', 1, NULL),
+(@pro_plan_id, 'menu_items', 1, NULL),
+(@pro_plan_id, 'orders', 1, NULL),
+(@pro_plan_id, 'payments', 1, NULL),
+(@pro_plan_id, 'gallery', 1, NULL),
+(@pro_plan_id, 'deals', 1, NULL),
+(@pro_plan_id, 'statistics', 1, NULL),
+(@pro_plan_id, 'exports', 1, NULL),
+(@pro_plan_id, 'staff_management', 1, NULL),
+(@pro_plan_id, 'branding', 1, NULL),
+(@pro_plan_id, 'custom_domain', 0, NULL),
+(@premium_plan_id, 'categories', 1, NULL),
+(@premium_plan_id, 'menu_items', 1, NULL),
+(@premium_plan_id, 'orders', 1, NULL),
+(@premium_plan_id, 'payments', 1, NULL),
+(@premium_plan_id, 'gallery', 1, NULL),
+(@premium_plan_id, 'deals', 1, NULL),
+(@premium_plan_id, 'statistics', 1, NULL),
+(@premium_plan_id, 'exports', 1, NULL),
+(@premium_plan_id, 'staff_management', 1, NULL),
+(@premium_plan_id, 'branding', 1, NULL),
+(@premium_plan_id, 'custom_domain', 1, NULL)
+ON DUPLICATE KEY UPDATE
+  is_enabled = VALUES(is_enabled),
+  limit_value = VALUES(limit_value),
+  updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO users (
   name,
@@ -814,3 +914,27 @@ INSERT INTO gallery_images (
 (@biryani_restaurant_id, 'Biryani Hero', 'images/Combo/Combo 2.jpg', 'Premium biryani hero image', 1, 'active'),
 (@biryani_restaurant_id, 'Kebab Plate', 'images/Burger/Burger 2.jpg', 'Smoky kebab plate highlight', 2, 'active'),
 (@biryani_restaurant_id, 'Drink Finish', 'images/Dinks/Drinks 1.jpg', 'Cooling drink highlight', 3, 'active');
+
+INSERT INTO restaurant_subscriptions (
+  restaurant_id,
+  plan_id,
+  status,
+  starts_at,
+  ends_at,
+  trial_ends_at
+)
+SELECT
+  r.id,
+  @premium_plan_id,
+  'active',
+  NOW(),
+  NULL,
+  NULL
+FROM restaurants r
+ON DUPLICATE KEY UPDATE
+  plan_id = VALUES(plan_id),
+  status = VALUES(status),
+  starts_at = COALESCE(restaurant_subscriptions.starts_at, VALUES(starts_at)),
+  ends_at = NULL,
+  trial_ends_at = NULL,
+  updated_at = CURRENT_TIMESTAMP;

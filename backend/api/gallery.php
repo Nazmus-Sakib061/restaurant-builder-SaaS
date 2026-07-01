@@ -195,6 +195,7 @@ if ($method === 'GET') {
 
 if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
     require_admin_write_access();
+    requireFeature($restaurantId, 'gallery');
 }
 
 if ($method === 'POST') {

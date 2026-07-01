@@ -204,3 +204,4 @@ function is_duplicate_key_error(Throwable $throwable): bool
 
 require_once __DIR__ . '/../helpers/restaurant_context.php';
 require_once __DIR__ . '/../helpers/auth.php';
+require_once __DIR__ . '/../helpers/feature_gate.php';

@@ -70,6 +70,69 @@ CREATE TABLE restaurants (
     ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE plans (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(150) NOT NULL,
+  slug VARCHAR(191) NOT NULL,
+  description TEXT NULL DEFAULT NULL,
+  price_monthly DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  price_yearly DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_plans_slug (slug),
+  KEY idx_plans_status (status),
+  KEY idx_plans_sort_order (sort_order),
+  KEY idx_plans_created_at (created_at),
+  KEY idx_plans_updated_at (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE plan_features (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  plan_id BIGINT UNSIGNED NOT NULL,
+  feature_key VARCHAR(64) NOT NULL,
+  is_enabled TINYINT(1) NOT NULL DEFAULT 0,
+  limit_value INT NULL DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_plan_features_plan_feature (plan_id, feature_key),
+  KEY idx_plan_features_plan_id (plan_id),
+  KEY idx_plan_features_feature_key (feature_key),
+  CONSTRAINT fk_plan_features_plan
+    FOREIGN KEY (plan_id) REFERENCES plans (id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE restaurant_subscriptions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  restaurant_id BIGINT UNSIGNED NOT NULL,
+  plan_id BIGINT UNSIGNED NOT NULL,
+  status ENUM('active', 'trialing', 'inactive', 'cancelled') NOT NULL DEFAULT 'active',
+  starts_at DATETIME NULL DEFAULT NULL,
+  ends_at DATETIME NULL DEFAULT NULL,
+  trial_ends_at DATETIME NULL DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_restaurant_subscriptions_restaurant_id (restaurant_id),
+  KEY idx_restaurant_subscriptions_plan_id (plan_id),
+  KEY idx_restaurant_subscriptions_status (status),
+  KEY idx_restaurant_subscriptions_created_at (created_at),
+  KEY idx_restaurant_subscriptions_updated_at (updated_at),
+  CONSTRAINT fk_restaurant_subscriptions_restaurant
+    FOREIGN KEY (restaurant_id) REFERENCES restaurants (id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_restaurant_subscriptions_plan
+    FOREIGN KEY (plan_id) REFERENCES plans (id)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE restaurant_users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   restaurant_id BIGINT UNSIGNED NOT NULL,

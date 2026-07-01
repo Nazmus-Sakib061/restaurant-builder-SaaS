@@ -237,6 +237,16 @@ function restaurant_management_create_row(PDO $pdo, array $payload): array
 
     restaurant_management_seed_default_settings($pdo, $restaurant);
 
+    $defaultPlanSlug = feature_gate_default_assignment_plan_slug();
+    $planRow = feature_gate_plan_row_by_slug($pdo, $defaultPlanSlug);
+    if ($planRow === null) {
+        $planRow = feature_gate_plan_row_by_slug($pdo, 'premium')
+            ?? feature_gate_plan_row_by_slug($pdo, 'free');
+    }
+    if ($planRow !== null) {
+        feature_gate_upsert_restaurant_subscription($pdo, (int) $restaurant['id'], (int) $planRow['id'], 'active');
+    }
+
     return $restaurant;
 }
 

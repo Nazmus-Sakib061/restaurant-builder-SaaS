@@ -184,6 +184,7 @@ $restaurantData = site_data_restaurant_row($pdo, $restaurantId);
 $settingsData = site_data_settings_row($pdo, $restaurantId);
 $publicSettings = site_data_public_settings($settingsData);
 $themeData = site_data_theme($settingsData);
+$plan = getRestaurantPlan($restaurantId);
 
 $categoriesStatement = $pdo->prepare(
     'SELECT id, restaurant_id, name, slug, description, image, sort_order, status, created_at, updated_at
@@ -245,6 +246,15 @@ $galleryStatement = $pdo->prepare(
      ORDER BY sort_order ASC, created_at DESC'
 );
 $galleryStatement->execute(['restaurant_id' => $restaurantId]);
+$gallery = site_data_public_gallery($galleryStatement->fetchAll());
+
+if (empty($plan['features']['deals'])) {
+    $deals = [];
+}
+
+if (empty($plan['features']['gallery'])) {
+    $gallery = [];
+}
 
 json_response([
     'success' => true,
@@ -256,6 +266,6 @@ json_response([
         'categories' => site_data_public_categories($categoriesStatement->fetchAll()),
         'menu_items' => site_data_public_menu_items($menuItems),
         'deals' => site_data_public_deals($deals),
-        'gallery' => site_data_public_gallery($galleryStatement->fetchAll()),
+        'gallery' => $gallery,
     ],
 ]);
