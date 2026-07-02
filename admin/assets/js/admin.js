@@ -145,6 +145,20 @@ const galleryPreviewFallback = document.getElementById("galleryPreviewFallback")
 const galleryAltField = document.getElementById("galleryAltField");
 const gallerySortField = document.getElementById("gallerySortField");
 const galleryStatusField = document.getElementById("galleryStatusField");
+const featureAccessCard = document.getElementById("featureAccessCard");
+const featureAccessHeadline = document.getElementById("featureAccessHeadline");
+const featureAccessSummary = document.getElementById("featureAccessSummary");
+const featureAccessStatisticsNote = document.getElementById("featureAccessStatisticsNote");
+const featureAccessStatisticsStatus = document.getElementById("featureAccessStatisticsStatus");
+const featureAccessExportsNote = document.getElementById("featureAccessExportsNote");
+const featureAccessExportsStatus = document.getElementById("featureAccessExportsStatus");
+const featureAccessStaffNote = document.getElementById("featureAccessStaffNote");
+const featureAccessStaffStatus = document.getElementById("featureAccessStaffStatus");
+const featureAccessBrandingNote = document.getElementById("featureAccessBrandingNote");
+const featureAccessBrandingStatus = document.getElementById("featureAccessBrandingStatus");
+const featureAccessDomainNote = document.getElementById("featureAccessDomainNote");
+const featureAccessDomainStatus = document.getElementById("featureAccessDomainStatus");
+const settingsAccessNote = document.getElementById("settingsAccessNote");
 
 const menuSnapshot = [
   { name: "Margherita Blaze Pizza", category: "Pizza", price: "$12.90" },
@@ -250,6 +264,76 @@ const urlLikeFieldNames = [
   "facebook_url",
   "instagram_url",
   "youtube_url"
+];
+
+const featureAccessStatusClasses = [
+  "feature-access-status--locked",
+  "feature-access-status--available",
+  "feature-access-status--placeholder",
+  "feature-access-status--pending"
+];
+
+const featureAccessRows = [
+  {
+    featureKey: "statistics",
+    noteElement: featureAccessStatisticsNote,
+    statusElement: featureAccessStatisticsStatus,
+    availableLabel: "Available",
+    availableNote: "Statistics dashboards are available on this plan.",
+    lockedLabel: "Locked",
+    lockedNote: "Statistics dashboards are locked on your current plan.",
+    pendingLabel: "Pending",
+    pendingNote: "Select a restaurant to inspect statistics access.",
+    stateClass: "available"
+  },
+  {
+    featureKey: "exports",
+    noteElement: featureAccessExportsNote,
+    statusElement: featureAccessExportsStatus,
+    availableLabel: "Available",
+    availableNote: "Export tools are available on this plan.",
+    lockedLabel: "Locked",
+    lockedNote: "Export tools are locked on your current plan.",
+    pendingLabel: "Pending",
+    pendingNote: "Select a restaurant to inspect export access.",
+    stateClass: "available"
+  },
+  {
+    featureKey: "staff_management",
+    noteElement: featureAccessStaffNote,
+    statusElement: featureAccessStaffStatus,
+    availableLabel: "Available",
+    availableNote: "Tenant staff controls are available on this plan.",
+    lockedLabel: "Locked",
+    lockedNote: "Tenant staff controls are locked on your current plan.",
+    pendingLabel: "Pending",
+    pendingNote: "Select a restaurant to inspect staff management access.",
+    stateClass: "available"
+  },
+  {
+    featureKey: "branding",
+    noteElement: featureAccessBrandingNote,
+    statusElement: featureAccessBrandingStatus,
+    availableLabel: "Available",
+    availableNote: "Website settings remain editable on this plan.",
+    lockedLabel: "Locked",
+    lockedNote: "Website settings are locked on your current plan.",
+    pendingLabel: "Pending",
+    pendingNote: "Select a restaurant to inspect branding availability.",
+    stateClass: "available"
+  },
+  {
+    featureKey: "custom_domain",
+    noteElement: featureAccessDomainNote,
+    statusElement: featureAccessDomainStatus,
+    availableLabel: "Placeholder",
+    availableNote: "Placeholder only. No routing changes are implemented yet.",
+    lockedLabel: "Locked",
+    lockedNote: "Custom domain is locked on your current plan.",
+    pendingLabel: "Pending",
+    pendingNote: "Select a restaurant to inspect custom domain access.",
+    stateClass: "placeholder"
+  }
 ];
 
 let loadedRestaurants = [];
@@ -1423,6 +1507,102 @@ const renderActiveRestaurantContext = (context = null) => {
   }
 };
 
+const setFeatureAccessStatus = (element, state, label) => {
+  if (!element) {
+    return;
+  }
+
+  element.textContent = label;
+  element.dataset.state = state;
+  featureAccessStatusClasses.forEach((className) => element.classList.remove(className));
+  element.classList.add(`feature-access-status--${state}`);
+};
+
+const updateSettingsAccessNote = (context = currentUserContext, brandingEnabled = true) => {
+  if (!settingsAccessNote) {
+    return;
+  }
+
+  const hasPlan = hasPlanContext(context);
+  let message = "Select a restaurant to review branding availability.";
+  let isError = false;
+
+  if (hasPlan) {
+    if (brandingEnabled) {
+      message = "Branding is available on this plan. Settings remain editable.";
+    } else {
+      message = "Branding is locked on this plan. Website settings are read-only until you upgrade.";
+      isError = true;
+    }
+  }
+
+  settingsAccessNote.textContent = message;
+  settingsAccessNote.classList.toggle("is-error", isError);
+};
+
+const updateFeatureAccessCard = (context = currentUserContext, featureStates = {}) => {
+  const hasPlan = hasPlanContext(context);
+  const plan = context?.plan || null;
+  const activeRestaurantName = context?.active_restaurant?.name || currentRestaurant?.name || "this tenant";
+  const planName = plan?.name || plan?.slug || "current";
+
+  if (featureAccessCard) {
+    featureAccessCard.dataset.planState = hasPlan ? (plan?.slug || "active") : "unselected";
+  }
+
+  if (featureAccessHeadline) {
+    featureAccessHeadline.textContent = hasPlan
+      ? `${planName} plan access`
+      : "Select a restaurant";
+  }
+
+  if (featureAccessSummary) {
+    featureAccessSummary.textContent = hasPlan
+      ? `${activeRestaurantName} is currently using the ${planName} plan.`
+      : "Advanced feature availability follows the active tenant plan.";
+  }
+
+  const rowStates = hasPlan
+    ? {
+        statistics: featureStates.statisticsEnabled ? "available" : "locked",
+        exports: featureStates.exportsEnabled ? "available" : "locked",
+        staff_management: featureStates.staffManagementEnabled ? "available" : "locked",
+        branding: featureStates.brandingEnabled ? "available" : "locked",
+        custom_domain: featureStates.customDomainEnabled ? "placeholder" : "locked"
+      }
+    : {
+        statistics: "pending",
+        exports: "pending",
+        staff_management: "pending",
+        branding: "pending",
+        custom_domain: "pending"
+      };
+
+  featureAccessRows.forEach((row) => {
+    const state = rowStates[row.featureKey] || "pending";
+    let statusLabel = row.pendingLabel;
+    let noteText = row.pendingNote;
+    let stateClass = "pending";
+
+    if (state === "locked") {
+      statusLabel = row.lockedLabel;
+      noteText = row.lockedNote;
+      stateClass = "locked";
+    } else if (state === "available" || state === "placeholder") {
+      statusLabel = row.availableLabel;
+      noteText = row.availableNote;
+      stateClass = row.stateClass || "available";
+    }
+
+    setFeatureAccessStatus(row.statusElement, stateClass, statusLabel);
+    if (row.noteElement) {
+      row.noteElement.textContent = noteText;
+    }
+  });
+
+  updateSettingsAccessNote(context, Boolean(featureStates.brandingEnabled));
+};
+
 const featureLockMessage = "This feature is not available on your current plan. Upgrade required.";
 
 const hasPlanContext = (context = currentUserContext) => Boolean(context?.plan?.slug);
@@ -1463,22 +1643,22 @@ const renderLockedTableMessage = (tableBody, columnCount, message) => {
 
 const applyPlanFeatureState = (context = currentUserContext) => {
   const hasPlan = hasPlanContext(context);
-  if (!hasPlan) {
-    setFormFeatureLock(galleryForm, false);
-    setFormFeatureLock(dealForm, false);
-    return {
-      galleryEnabled: true,
-      dealsEnabled: true
-    };
-  }
+  const featureStates = {
+    galleryEnabled: !hasPlan || Boolean(context?.plan?.features?.gallery),
+    dealsEnabled: !hasPlan || Boolean(context?.plan?.features?.deals),
+    statisticsEnabled: !hasPlan || Boolean(context?.plan?.features?.statistics),
+    exportsEnabled: !hasPlan || Boolean(context?.plan?.features?.exports),
+    staffManagementEnabled: !hasPlan || Boolean(context?.plan?.features?.staff_management),
+    brandingEnabled: !hasPlan || Boolean(context?.plan?.features?.branding),
+    customDomainEnabled: !hasPlan || Boolean(context?.plan?.features?.custom_domain)
+  };
 
-  const galleryEnabled = !hasPlan || Boolean(context?.plan?.features?.gallery);
-  const dealsEnabled = !hasPlan || Boolean(context?.plan?.features?.deals);
+  setFormFeatureLock(galleryForm, !featureStates.galleryEnabled);
+  setFormFeatureLock(dealForm, !featureStates.dealsEnabled);
+  setFormFeatureLock(settingsForm, hasPlan && !featureStates.brandingEnabled);
+  updateFeatureAccessCard(context, featureStates);
 
-  setFormFeatureLock(galleryForm, !galleryEnabled);
-  setFormFeatureLock(dealForm, !dealsEnabled);
-
-  if (!galleryEnabled) {
+  if (!featureStates.galleryEnabled) {
     showGalleryFeedback(featureLockMessage, "error");
     renderLockedTableMessage(galleryTableBody, 6, featureLockMessage);
   } else if (currentGallery.length || galleryTableBody) {
@@ -1486,7 +1666,7 @@ const applyPlanFeatureState = (context = currentUserContext) => {
     showGalleryFeedback("");
   }
 
-  if (!dealsEnabled) {
+  if (!featureStates.dealsEnabled) {
     showDealFeedback(featureLockMessage, "error");
     renderLockedTableMessage(dealTableBody, 6, featureLockMessage);
   } else if (dealTableBody) {
@@ -1494,10 +1674,7 @@ const applyPlanFeatureState = (context = currentUserContext) => {
     showDealFeedback("");
   }
 
-  return {
-    galleryEnabled,
-    dealsEnabled
-  };
+  return featureStates;
 };
 
 const setTenantManagementFeedback = (message, state = "success") => {
@@ -2336,6 +2513,12 @@ const saveSettings = async (event) => {
   }
 
   const selectedSlug = restaurantSelect.value || DEFAULT_RESTAURANT_SLUG;
+
+  if (!isFeatureEnabled("branding")) {
+    showSettingsFeedback(featureLockMessage, "error");
+    showAdminToast(featureLockMessage, "error");
+    return;
+  }
 
   setButtonLoading(true);
 
@@ -3327,6 +3510,27 @@ const setDealUploadButtonLoading = (loading) => {
   setUploadButtonLoading(dealUploadButton, loading);
 };
 
+const uploadPurposeFeatureMap = {
+  gallery: "gallery",
+  deals: "deals",
+  settings: "branding"
+};
+
+const assertUploadPurposeAllowed = (purpose, showFeedback, showToast = true) => {
+  const featureKey = uploadPurposeFeatureMap[purpose];
+  if (!featureKey || isFeatureEnabled(featureKey)) {
+    return true;
+  }
+
+  const message = featureLockMessage;
+  showFeedback(message, "error");
+  if (showToast) {
+    showAdminToast(message, "error");
+  }
+
+  return false;
+};
+
 const uploadRestaurantImage = async ({
   fileInput,
   imageInput,
@@ -3347,6 +3551,10 @@ const uploadRestaurantImage = async ({
   };
 
   if (!restaurantSelect || !fileInput || !imageInput) {
+    return null;
+  }
+
+  if (!assertUploadPurposeAllowed(purpose, showFeedback, showToast)) {
     return null;
   }
 

@@ -113,6 +113,17 @@ if ($purpose === 'settings' && !in_array($slot, ['logo', 'hero', 'about'], true)
     ]);
 }
 
+$featureKey = match ($purpose) {
+    'gallery' => 'gallery',
+    'deals' => 'deals',
+    'settings' => 'branding',
+    default => null,
+};
+
+if ($featureKey !== null) {
+    requireFeature($restaurantId, $featureKey);
+}
+
 $file = $_FILES['image'] ?? null;
 if (!is_array($file)) {
     upload_error('Validation error.', [

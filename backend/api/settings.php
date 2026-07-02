@@ -380,6 +380,7 @@ if ($method === 'GET') {
 
 if (in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
     require_admin_write_access();
+    requireFeature($restaurantId, 'branding');
 
     $rawBody = file_get_contents('php://input');
     if ($rawBody === false || trim($rawBody) === '') {

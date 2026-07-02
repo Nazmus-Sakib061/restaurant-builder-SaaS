@@ -104,6 +104,48 @@ if (!$pdo instanceof PDO || auth_current_user($pdo) === null) {
             <strong id="statRevenue">$0</strong>
             <small>Placeholder metric for dashboards, charts, and future analytics.</small>
           </article>
+          <article class="stat-card stat-card--feature-access feature-access-card" id="featureAccessCard">
+            <span>Plan Access</span>
+            <strong id="featureAccessHeadline">Select a restaurant</strong>
+            <small id="featureAccessSummary">Advanced feature availability follows the active tenant plan.</small>
+            <div class="feature-access-list">
+              <div class="feature-access-row">
+                <div>
+                  <strong>Statistics</strong>
+                  <small id="featureAccessStatisticsNote">This feature is not available on your current plan. Upgrade required.</small>
+                </div>
+                <span class="status-pill status-pill--accent feature-access-status" id="featureAccessStatisticsStatus">Locked</span>
+              </div>
+              <div class="feature-access-row">
+                <div>
+                  <strong>Exports</strong>
+                  <small id="featureAccessExportsNote">Export tools are locked on your current plan.</small>
+                </div>
+                <span class="status-pill status-pill--accent feature-access-status" id="featureAccessExportsStatus">Locked</span>
+              </div>
+              <div class="feature-access-row">
+                <div>
+                  <strong>Staff Management</strong>
+                  <small id="featureAccessStaffNote">Tenant staff controls are locked on your current plan.</small>
+                </div>
+                <span class="status-pill status-pill--accent feature-access-status" id="featureAccessStaffStatus">Locked</span>
+              </div>
+              <div class="feature-access-row">
+                <div>
+                  <strong>Branding</strong>
+                  <small id="featureAccessBrandingNote">Website settings stay editable when branding is available.</small>
+                </div>
+                <span class="status-pill status-pill--accent feature-access-status" id="featureAccessBrandingStatus">Locked</span>
+              </div>
+              <div class="feature-access-row">
+                <div>
+                  <strong>Custom Domain</strong>
+                  <small id="featureAccessDomainNote">Placeholder only. No routing changes are implemented yet.</small>
+                </div>
+                <span class="status-pill status-pill--accent feature-access-status" id="featureAccessDomainStatus">Placeholder</span>
+              </div>
+            </div>
+          </article>
         </section>
 
         <section class="panel panel--wide tenant-management" id="tenantManagement" hidden>
@@ -712,6 +754,7 @@ if (!$pdo instanceof PDO || auth_current_user($pdo) === null) {
               </div>
               <p class="settings-feedback" id="settingsFeedback" aria-live="polite"></p>
             </div>
+            <p class="settings-note settings-access-note" id="settingsAccessNote">Select a restaurant to review branding availability.</p>
 
             <dl class="settings-list settings-list--summary" id="settingsDetails"></dl>
 
@@ -923,4 +966,3 @@ if (!$pdo instanceof PDO || auth_current_user($pdo) === null) {
   <script src="assets/js/admin.js?v=auth-foundation-1"></script>
 </body>
 </html>
-
